@@ -24,6 +24,7 @@ import {
 import { Mail, Phone, Building, ArrowLeft, Edit, Trash2, Tag } from 'lucide-react';
 
 
+
 export function ContactDetails() {
   const [contact, setContact] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -41,6 +42,7 @@ export function ContactDetails() {
 
   useEffect(() => {
     const token = Cookies.get('auth');
+    // console.log('Token:', token);
     async function fetchContactData() {
       try {
         setLoading(true);
@@ -102,7 +104,7 @@ export function ContactDetails() {
             </Button>
           </div>
         </div>
-
+        
         <Card className="p-6">
           {/* Top Layer - Avatar, Name and Tags */}
           <div className="flex justify-between items-start flex-wrap gap-4">
@@ -170,7 +172,7 @@ export function ContactDetails() {
             </p>
           </CardContent>
         </Card>
-        
+
         {/* Recent Activity Section */}
         <Card>
           <CardHeader>

@@ -18,12 +18,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { MoreHorizontal, ListIcon, LayoutGridIcon, Filter, SquarePen, Trash2 } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 
+
+import { AddContactDialog } from "@/components/AddContactDialog"
+
+import Cookies from "js-cookie"
 import { Card } from "@/components/ui/card"
 
 import { useState } from "react";
 
 import { useRouter } from "next/navigation"
-
+import { useEffect } from "react";
 
 
 const contacts = [
@@ -69,23 +73,62 @@ const contacts = [
     }
 ];
 
-
-
 function Contact() {
     const router = useRouter();
     const [viewMode, setViewMode] = useState("table");
+    const [contacts, setContacts] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-
-
-
-
-
-    const onClikingContactDetails = () => {
-        console.log("Contact clicked");
-        router.push(`/contacts/${contacts[0].id}`);
+    const onClikingContactDetails = (contactId) => {
+        console.log("Contact clicked", contactId);
+        router.push(`/contacts/${contactId}`);
     }
 
 
+    useEffect(() => {
+        const token = Cookies.get('auth');
+        const fetchContacts = async () => {
+            try {
+                setIsLoading(true);
+                // Replace with your actual API endpoint
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/contacts`, {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log("Fetched Contacts:", data.contacts);
+                setContacts(data.contacts);
+                setError(null);
+            } catch (err) {
+                console.error('Error fetching contacts:', err);
+                setError('Failed to load contacts. Please try again later.');
+                // Fallback to demo data if API fails
+                setContacts([
+                    {
+                        id: "X7d93kA8sLp0wErTgqVn91UyZbNmKj2L",
+                        initials: "JS",
+                        name: "John Smith",
+                        email: "john.smith@techcorp.com",
+                        company: "TechCorp",
+                        tags: ["Hot Lead", "VIP"],
+                        tagColors: ["destructive", "secondary"],
+                        lastInteraction: "2 days ago"
+                    },
+                ]);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchContacts();
+    }, []);
 
 
 
@@ -141,7 +184,9 @@ function Contact() {
                     </div>
                     <div className="flex items-center gap-2">
                         <Button variant="outline">Import CSV</Button>
-                        <Button >Add Contact</Button>
+                        <div className="p-6">
+                            <AddContactDialog />
+                        </div>
                         <Button variant={viewMode === "table" ? "outline" : "ghost"} size="icon" onClick={() => setViewMode("table")}>
                             <ListIcon className="w-4 h-4" />
                         </Button>
@@ -184,8 +229,8 @@ function Contact() {
                                         <TableCell>{contact.company}</TableCell>
                                         <TableCell className="flex gap-1">
                                             {contact.tags.map((tag, i) => (
-                                                <Badge key={i} variant={contact.tagColors[i] || "default"} >
-                                                    {tag}
+                                                <Badge key={i} variant={tag.color || "default"} >
+                                                    {tag.name}
                                                 </Badge>
                                             ))}
                                         </TableCell>
@@ -250,8 +295,8 @@ function Contact() {
                                         </DropdownMenu>
                                     </div>
                                     <div className="mt-2 flex flex-wrap gap-2">
-                                        {contact.tags.map((tag) => (
-                                            <Badge key={tag} variant="outline">{tag}</Badge>
+                                        {contact.tags.map((tag, index) => (
+                                            <Badge key={index} variant={tag.color || "default"}>{tag.name}</Badge>
                                         ))}
                                     </div>
                                     <div className="text-sm text-muted-foreground mt-2">
@@ -266,5 +311,9 @@ function Contact() {
         </>
     )
 }
+
+
+
+
 
 export default Contact
