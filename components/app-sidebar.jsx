@@ -4,7 +4,6 @@ import * as React from "react"
 import {
   AudioWaveform,
   BookOpen,
-  Bot,
   Command,
   Frame,
   GalleryVerticalEnd,
@@ -12,6 +11,11 @@ import {
   PieChart,
   Settings2,
   SquareTerminal,
+  LayoutDashboard ,
+  NotebookTabs,
+  Activity ,
+  Tags ,
+  Bot ,
 } from "lucide-react"
 
 
@@ -40,7 +44,7 @@ const data = {
   user: {
     name: "shadcn",
     email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
+    avatar: "",
   },
   teams: [
     {
@@ -198,16 +202,43 @@ export function AppSidebar({ ...props }) {
     user: {
       name: user.displayName,
       email: user.email,
-      avatar: "/avatars/shadcn.jpg",
+      avatar: "",
     },
   } : {
     user: {
       name: "Guest",
       email: "",
-      avatar: "/avatars/default.jpg",
+      avatar: "",
     },
   }
 
+  const navData=[
+  {
+    title: "Dashboard",
+    url: "/dashboard",
+    icon: LayoutDashboard,
+  },
+  {
+    title: "Contacts",
+    url: "/contacts",
+    icon: NotebookTabs,
+  },
+  {
+    title: "Activities",
+    url: "/activities",
+    icon: Activity,
+  },
+  {
+    title: "Tags",
+    url: "/tags",
+    icon: Tags,
+  },
+  {
+    title: "AI Assistant",
+    url: "/assistant",
+    icon: Bot,
+  }
+  ]
 
 
 
@@ -226,7 +257,7 @@ export function AppSidebar({ ...props }) {
         <TeamSwitcher teams={data.teams} />
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        <NavMain items={navData} />
         {/* <NavProjects projects={data.projects} /> */}
       </SidebarContent>
       <SidebarFooter>
