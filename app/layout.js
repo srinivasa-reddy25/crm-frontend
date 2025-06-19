@@ -8,6 +8,8 @@ export const metadata = {
 };
 
 import { QueryProvider } from '@/components/providers/QueryProvider';
+import { Toaster } from 'sonner';
+
 
 
 export default function RootLayout({ children }) {
@@ -22,7 +24,8 @@ export default function RootLayout({ children }) {
         >
           <AuthProvider>
             <QueryProvider>
-            {children}
+              <Toaster position="top-right" richColors closeButton />
+              {children}
             </QueryProvider>
           </AuthProvider>
         </ThemeProvider>

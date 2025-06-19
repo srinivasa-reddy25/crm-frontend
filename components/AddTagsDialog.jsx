@@ -22,7 +22,6 @@ import {
 import { Tag, Plus, X, Palette } from 'lucide-react'
 import Cookies from 'js-cookie'
 
-// Predefined color options
 const colorOptions = [
     { name: 'Red', bg: 'bg-red-100', text: 'text-red-800', value: 'red' },
     { name: 'Blue', bg: 'bg-blue-100', text: 'text-blue-800', value: 'blue' },

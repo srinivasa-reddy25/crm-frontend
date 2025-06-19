@@ -2,18 +2,17 @@ import axiosInstance from './axiosInstance';
 
 
 export const getContacts = (params) => {
-    return axiosInstance.get('/contacts', { params });
+    return axiosInstance.get('/contacts', { params }).then((res) => res.data);;
 };
 
-
 export const getContactById = async (id) => {
-  try {
-    const response = await axiosInstance.get(`/contacts/${id}`);
-    return response.data;
-  } catch (error) {
-    console.error(`Error fetching contact with ID ${id}:`, error);
-    throw error;
-  }
+    try {
+        const response = await axiosInstance.get(`/contacts/${id}`);
+        return response.data;
+    } catch (error) {
+        console.error(`Error fetching contact with ID ${id}:`, error);
+        throw error;
+    }
 };
 
 

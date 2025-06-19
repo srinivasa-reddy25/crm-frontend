@@ -9,27 +9,47 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Camera, Eye, EyeOff, Save } from "lucide-react"
-import axios from "axios"
-import Cookies from "js-cookie"
+import { Camera, Save } from "lucide-react"
 
 import CloudinaryUploader from "@/app/utilities/Cloudinary"
-
-import { getContacts } from "@/services/contactsApi"
-
 import { CardContent } from "@/components/ui/card"
 
+import { useQuery, useMutation } from "@tanstack/react-query"
+import { getUserProfile, updateUserProfile } from "@/services/profileApi"
+import { toast } from 'sonner'
 
 export default function ProfileClient() {
     const [displayName, setDisplayName] = useState('')
-    const [email, setEmail] = useState('')
-    const [currentPassword, setCurrentPassword] = useState('')
-    const [newPassword, setNewPassword] = useState('')
-    const [confirmPassword, setConfirmPassword] = useState('')
     const [avatarUrl, setAvatarUrl] = useState('')
-    const [showCurrentPassword, setShowCurrentPassword] = useState(false)
-    const [showNewPassword, setShowNewPassword] = useState(false)
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+
+    const {
+        data: userData,
+        isLoading,
+        isError,
+        error,
+    } = useQuery({
+        queryKey: ['userProfile'],
+        queryFn: getUserProfile,
+    });
+
+    // 🧠 Pre-fill form inputs once profile is fetched
+    useEffect(() => {
+        if (userData) {
+            setDisplayName(userData.user.displayName || '')
+            setAvatarUrl(userData.user.profilePicture || '')
+        }
+    }, [userData])
+
+    const { mutate: saveProfile, isPending: isSaving } = useMutation({
+        mutationFn: updateUserProfile,
+        onSuccess: (data) => {
+            toast.success('Profile updated successfully!')
+        },
+        onError: (error) => {
+            console.error("Failed to update profile:", error)
+            toast.error('Something went wrong while updating your profile.')
+        }
+    });
 
     const getInitials = (name) =>
         name ? name.split(' ').map(n => n[0]).join('').toUpperCase() : ''
@@ -41,85 +61,28 @@ export default function ProfileClient() {
             const imageurl = await CloudinaryUploader(file)
             if (imageurl) {
                 setAvatarUrl(imageurl)
+            } else {
+                throw new Error("Image upload failed")
             }
-            else {
-                throw new Error("image error")
-            }
-        }
-        catch (error) {
+        } catch (error) {
+            toast.error("Error uploading avatar")
             console.log(error)
         }
     }
 
-
-    const handleSaveChanges = async () => {
-        if (newPassword && newPassword !== confirmPassword) {
-            alert("New passwords do not match")
-            return
+    const handleSaveChanges = () => {
+        const payload = {
+            displayName,
+            profilePicture: avatarUrl,
         }
-
-        const authCookie = Cookies.get('auth')
-
-        try {
-            console.log("current name ", displayName)
-            const response = await axios.put(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/auth/profile`,
-                {
-                    displayName,
-                    profilePicture: avatarUrl,
-                },
-                {
-                    headers: {
-                        Authorization: `Bearer ${authCookie}`,
-                        'Content-Type': 'application/json',
-                    },
-                }
-            )
-
-            console.log("Response from backend:", response.data)
-
-            alert("Profile updated successfully!")
-
-            setCurrentPassword('')
-            setNewPassword('')
-            setConfirmPassword('')
-        } catch (err) {
-            console.error("Failed to update profile:", err)
-            alert("Something went wrong while updating your profile.")
-        }
+        saveProfile(payload)
     }
 
-
-    useEffect(() => {
-        const authCookie = Cookies.get('auth')
-        const fetchUserData = async () => {
-            try {
-                const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/profile`, {
-                    headers: {
-                        Authorization: `Bearer ${authCookie}`,
-                        'Content-Type': 'application/json',
-                    }
-                })
-                const data = response.data
-                setDisplayName(data.user.displayName)
-                setEmail(data.user.email)
-                setAvatarUrl(data.user.profilePicture)
-                // console.log(data)
-            } catch (err) {
-                console.error("Failed to fetch profile:", err)
-            }
-        }
-
-        fetchUserData()
-    }, [])
-
-
-    // useEffect(() => {
-    //     getContacts()
-    //         .then((res) => console.log('Fetched contacts:', res))
-    //         .catch((err) => console.error('Error fetching contacts:', err));
-    // }, []);
-
+    if (isLoading) return <div>Loading...</div>
+    if (isError) {
+        console.error("Error fetching user profile:", error)
+        return <div>Error loading profile</div>
+    }
 
     return (
         <>
@@ -138,6 +101,7 @@ export default function ProfileClient() {
                     </Breadcrumb>
                 </div>
             </header>
+
             <div className="flex flex-1 flex-col gap-4 p-4 pt-0 bg-light dark:bg-dark">
                 <CardContent className="space-y-6">
                     {/* Avatar Section */}
@@ -186,10 +150,9 @@ export default function ProfileClient() {
                             <Label htmlFor="email">Email Address</Label>
                             <Input
                                 id="email"
-                                value={email}
+                                value={userData.user.email}
                                 readOnly
                                 className="bg-gray-50 cursor-not-allowed"
-                                placeholder="your.email@example.com"
                             />
                             <p className="text-xs text-gray-500">
                                 Email address cannot be changed
@@ -197,109 +160,16 @@ export default function ProfileClient() {
                         </div>
                     </div>
 
-                    {/* <Separator /> */}
-
-                    {/* Password Update Section */}
-                    {/* <div className="space-y-4">
-                        <div>
-                            <h3 className="text-lg font-medium text-gray-900">Update Password</h3>
-                            <p className="text-sm text-gray-500">
-                                Leave blank if you don't want to change your password
-                            </p>
-                        </div>
-
-                        <div className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="currentPassword">Current Password</Label>
-                                <div className="relative">
-                                    <Input
-                                        id="currentPassword"
-                                        type={showCurrentPassword ? "text" : "password"}
-                                        value={currentPassword}
-                                        onChange={(e) => setCurrentPassword(e.target.value)}
-                                        placeholder="Enter current password"
-                                    />
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="sm"
-                                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                                    >
-                                        {showCurrentPassword ? (
-                                            <EyeOff className="h-4 w-4" />
-                                        ) : (
-                                            <Eye className="h-4 w-4" />
-                                        )}
-                                    </Button>
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="newPassword">New Password</Label>
-                                <div className="relative">
-                                    <Input
-                                        id="newPassword"
-                                        type={showNewPassword ? "text" : "password"}
-                                        value={newPassword}
-                                        onChange={(e) => setNewPassword(e.target.value)}
-                                        placeholder="Enter new password"
-                                    />
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="sm"
-                                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                                        onClick={() => setShowNewPassword(!showNewPassword)}
-                                    >
-                                        {showNewPassword ? (
-                                            <EyeOff className="h-4 w-4" />
-                                        ) : (
-                                            <Eye className="h-4 w-4" />
-                                        )}
-                                    </Button>
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                                <div className="relative">
-                                    <Input
-                                        id="confirmPassword"
-                                        type={showConfirmPassword ? "text" : "password"}
-                                        value={confirmPassword}
-                                        onChange={(e) => setConfirmPassword(e.target.value)}
-                                        placeholder="Confirm new password"
-                                    />
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="sm"
-                                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                    >
-                                        {showConfirmPassword ? (
-                                            <EyeOff className="h-4 w-4" />
-                                        ) : (
-                                            <Eye className="h-4 w-4" />
-                                        )}
-                                    </Button>
-                                </div>
-                            </div>
-                        </div>
-                    </div> */}
-
                     <Separator />
 
                     {/* Save Button */}
                     <div className="flex justify-end pt-4">
-                        <Button onClick={handleSaveChanges} className="px-8">
+                        <Button onClick={handleSaveChanges} className="px-8" disabled={isSaving}>
                             <Save className="w-4 h-4 mr-2" />
-                            Save Changes
+                            {isSaving ? "Saving..." : "Save Changes"}
                         </Button>
                     </div>
                 </CardContent>
-
             </div>
         </>
     )

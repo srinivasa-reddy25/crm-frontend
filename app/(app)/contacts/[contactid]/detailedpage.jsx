@@ -1,4 +1,5 @@
 'use client';
+import { cn } from "@/lib/utils";
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
@@ -15,18 +16,28 @@ import { Separator } from "@/components/ui/separator"
 import { Skeleton } from '@/components/ui/skeleton';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { ModeToggle } from '@/components/mode-toggle';
+
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
   Breadcrumb,
   BreadcrumbList,
   BreadcrumbItem,
   BreadcrumbPage,
 } from '@/components/ui/breadcrumb';
-import { Mail, Phone, Building, ArrowLeft, Edit, Trash2, Tag, X, Save } from 'lucide-react';
+import { Mail, Phone, Building, ArrowLeft, Edit, Trash2, Tag, X, Save, Check, ChevronsUpDown } from 'lucide-react';
 
+import { getContactById } from "@/services/contactsApi";
 
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 
+import queryClient from "@/lib/queryClient";
 
+import { getTags } from "@/services/tagsApi";
+import { deleteContact } from "@/services/contactsApi";
+import { updateContact } from '@/services/contactsApi';
 
+import { toast } from 'sonner';
 
 export function ContactDetails() {
 
@@ -35,21 +46,79 @@ export function ContactDetails() {
   const isEditMod = searchParams.get('isEditMode');
 
 
-  const [contact, setContact] = useState(null);
+  // const [contact, setContact] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isEditMode, setIsEditMode] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(isEditMod ? true : false);
   const [formData, setFormData] = useState({});
   const [errors, setErrors] = useState({});
-  const [error, setError] = useState(null);
+  const [availableTags, setAvailableTags] = useState([]);
+  // const [error, setError] = useState(null);
   const params = useParams();
   const contactId = params.contactid;
+
   const router = useRouter();
-  // const { id, isEditMod } = router.query;
+  const queryClient = useQueryClient();
 
 
-  const onClickingBackButton = () => {
-    router.push('/contacts'); // Navigate back to the contacts list
-  }
+
+  const {
+    data: contact,
+    isLoading,
+    error
+  } = useQuery({
+    queryKey: ['contact', contactId],
+    queryFn: () => getContactById(contactId),
+    enabled: !!contactId, // Only run the query if contactId exists
+  });
+
+
+  const { mutate: deleteContactMutate, isPending: isUpdating } = useMutation({
+    mutationFn: deleteContact,
+    onSuccess: () => {
+      toast.success('Contact deleted!');
+      queryClient.invalidateQueries(['contacts']);
+      router.push('/contacts');
+    },
+    onError: (error) => {
+      console.error('Delete failed:', error);
+      toast.error('Failed to delete contact');
+    },
+  });
+
+
+
+
+  const { mutate: updateContactMutate, isPending: isDeleting } = useMutation({
+    mutationFn: ({ id, data }) => updateContact(id, data),
+    onSuccess: (res) => {
+      toast.success('Contact updated!');
+      queryClient.invalidateQueries(['contacts']); // Optional: refetch contact list
+      setIsEditMode(false);
+    },
+    onError: (error) => {
+      console.error('Error updating contact:', error);
+      toast.error('Failed to update contact');
+    }
+  });
+
+
+
+
+  const { data: tagsData, isLoading: isLoadingTags, error: tagError } = useQuery({
+    queryKey: ['tags'],
+    queryFn: getTags,
+    enabled: isEditMode === true || isEditMod === 'true',
+  });
+
+
+
+
+
+
+
+
+
+
   const getInitials = (name) =>
     name ? name.split(' ').map(n => n[0]).join('').toUpperCase() : ''
 
@@ -64,88 +133,33 @@ export function ContactDetails() {
 
   const handleToggleEditMode = () => {
     if (isEditMode) {
-      // Discard changes when canceling
       setFormData(contact);
-      setErrors({});
     }
     setIsEditMode(!isEditMode);
   };
 
-
-  const handleDelete = async (contactId) => {
-    const token = Cookies.get('auth');
-    try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/contacts/${contactId}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete contact');
-      }
-
-      const result = await response.json();
-      console.log('Contact deleted successfully:', result);
-
-      // Redirect or update state after deletion
-      router.push('/contacts'); // Navigate back to the contacts list
-    } catch (error) {
-      console.error('Error deleting contact:', error);
-      // Handle error - show error message
-    }
-  }
-
-
-  const handleSubmit = async (e) => {
-    const token = Cookies.get('auth');
+  const handleSubmit = (e) => {
     e.preventDefault();
-    // console.log('Submitting form with data:', formData);
-    try {
-      setErrors({});
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/contacts/${contactId}`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-          company: formData.company ? formData.company._id : null,
-          tags: formData.tags ? formData.tags.map(tag => tag._id) : [],
-          notes: formData.notes,
-          // createdBy: formData.createdBy, // Assuming you want to keep this as is
-          // createdAt: formData.createdAt, // Assuming you want to keep this as is
-          updatedAt: new Date(),
-          lastInteraction: new Date() // Assuming you want to update this to now
-        }),
 
-      });
-      // setContact(response.data);
-      const data = await response.json();
-      console.log('Updated Contact:', data);
-      setIsEditMode(false);
-      // Show success message
-    } catch (error) {
-      if (error.response && error.response.data.errors) {
-        setErrors(error.response.data.errors);
-      } else {
-        console.error('Error updating contact:', error);
-      }
-    }
+    const updateData = {
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone,
+      company: formData.company ? formData.company._id : null,
+      tags: formData.tags ? formData.tags.map(tag => tag._id) : [],
+      notes: formData.notes,
+      updatedAt: new Date(),
+      lastInteraction: new Date()
+    };
+
+    updateContactMutate({ id: contactId, data: updateData });
   };
-
-
 
   const handleDeleteClick = (contactId) => {
     if (window.confirm('Are you sure you want to delete this contact?')) {
-      handleDelete(contactId);
+      deleteContactMutate(contactId);
     }
-  }
+  };
 
   const handleTagChange = (tags) => {
     setFormData({
@@ -158,54 +172,37 @@ export function ContactDetails() {
 
 
   useEffect(() => {
-    // Set editing mode when the query parameter exists and equals 'true'
+    if (tagsData) {
+      setAvailableTags(tagsData.tags || []);
+    }
+  }, [tagsData]);
+
+
+  useEffect(() => {
     if (isEditMod === 'true') {
       setIsEditMode(true);
     }
   }, [isEditMod]);
 
 
-
-
-
-
   useEffect(() => {
-    const token = Cookies.get('auth');
-    // console.log('Token:', token);
-    async function fetchContactData() {
-      try {
-        setLoading(true);
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/contacts/${contactId}`, {
-
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-        if (!response.ok) throw new Error(`Failed to fetch contact: ${response.statusText}`);
-        const data = await response.json();
-        console.log('Contact Data:', data);
-        setFormData(data);
-        // console.log('Contact ID:', data.company.name);
-        setContact(data);
-        setError(null);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
+    if (contact) {
+      setFormData(contact);
     }
-    if (contactId) fetchContactData();
-  }, [contactId]);
+  }, [contact]);
 
-  if (loading) {
+
+
+  if (isLoading) {
     return <Skeleton className="h-[300px] w-full rounded-xl" />;
   }
 
   if (error) {
-    return <div className="text-red-500">Error: {error}</div>;
+    return <div className="text-red-500">Error: {error.message}</div>;
   }
 
   return (
+
     <>
       <header className="flex h-16 shrink-0 items-center gap-2">
         <SidebarTrigger />
@@ -223,7 +220,7 @@ export function ContactDetails() {
       <div className="flex flex-1 flex-col gap-4 p-4 pt-0 bg-light dark:bg-dark">
 
         <div className="flex justify-between items-center px-4 py-2">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={onClickingBackButton}>
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => router.push('/contacts')}>
             <ArrowLeft className="h-4 w-4" />
             <span className="text-sm font-medium text-primary">Back to Contacts</span>
           </div>
@@ -286,7 +283,6 @@ export function ContactDetails() {
             </div>
           </div>
 
-          {/* Second Layer - Contact Info in Column */}
           <CardContent className="mt-6 space-y-4 grid grid-cols-1 grid-cols-2 gap-4">
             <div className="flex items-center gap-2">
               <Mail className="inline mr-1 text-muted-foreground" />
@@ -370,7 +366,121 @@ export function ContactDetails() {
                 </div>
               </div> */}
               <p className="text-sm text-muted-foreground">Tags</p>
+
+
               {isEditMode ? (
+                <div className="w-full">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className="w-full justify-between"
+                      >
+                        {formData.tags?.length > 0
+                          ? `${formData.tags.length} tag${formData.tags.length > 1 ? 's' : ''} selected`
+                          : "Select tags..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Search tags..." />
+                        <CommandEmpty>No tags found.</CommandEmpty>
+                        <CommandGroup className="max-h-64 overflow-auto">
+                          {availableTags.map((tag) => (
+                            <CommandItem
+                              key={tag._id}
+                              value={tag.name}
+                              onSelect={() => {
+                                setFormData(prevData => {
+                                  const isSelected = prevData.tags?.some(t => t._id === tag._id);
+
+                                  let updatedTags;
+                                  if (isSelected) {
+                                    // Remove tag if already selected
+                                    updatedTags = prevData.tags.filter(t => t._id !== tag._id);
+                                  } else {
+                                    // Add tag if not selected
+                                    updatedTags = [...(prevData.tags || []), tag];
+                                  }
+
+                                  return { ...prevData, tags: updatedTags };
+                                });
+                              }}
+                            >
+                              <div className="flex items-center">
+                                <div
+                                  className="w-3 h-3 rounded-full mr-2"
+                                  style={{ backgroundColor: tag.color || '#888888' }}
+                                />
+                                {tag.name}
+                              </div>
+                              <Check
+                                className={cn(
+                                  "ml-auto h-4 w-4",
+                                  formData.tags?.some(t => t._id === tag._id) ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+
+                  {/* Display selected tags */}
+                  {formData.tags && formData.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {formData.tags.map((tag) => (
+                        <Badge
+                          key={tag._id}
+                          variant="outline"
+                          style={{
+                            borderColor: tag.color || '#888888',
+                            color: tag.color || '#888888',
+                            backgroundColor: `${tag.color}10` || '#f8f8f8',
+                          }}
+                        >
+                          {tag.name}
+                          <button
+                            type="button"
+                            className="ml-1 rounded-full outline-none focus:ring-2"
+                            onClick={() => {
+                              setFormData(prevData => ({
+                                ...prevData,
+                                tags: prevData.tags.filter(t => t._id !== tag._id)
+                              }))
+                            }}
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-4 mt-1">
+                  {contact.tags.map((tag, i) => (
+                    <Badge
+                      key={i}
+                      variant="outline"
+                      style={{
+                        borderColor: tag.color || '#888888',
+                        color: tag.color || '#888888',
+                        backgroundColor: `${tag.color}10` || '#f8f8f8',
+                      }}
+                    >
+                      {tag.name}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+
+
+
+              {/* {isEditMode ? (
                 <input
                   type="text"
                   name="tags"
@@ -398,7 +508,7 @@ export function ContactDetails() {
                     </Badge>
                   ))}
                 </div>
-              )}
+              )} */}
 
 
             </div>
@@ -431,7 +541,7 @@ export function ContactDetails() {
         </Card>
 
         {/* Recent Activity Section */}
-        <Card>
+        {/* <Card>
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>
           </CardHeader>
@@ -449,10 +559,12 @@ export function ContactDetails() {
               <span className="text-sm text-muted-foreground">2 weeks ago</span>
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
 
-      </div>
+      </div >
     </>
+
+
   );
 }
 

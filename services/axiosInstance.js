@@ -18,7 +18,11 @@ axiosInstance.interceptors.request.use(async (config) => {
 axiosInstance.interceptors.response.use(
     (response) => response,
     (error) => {
-        console.error('API Error:', error.response?.data || error.message);
+        const status = error.response?.status;
+        const url = error.config?.url;
+        const method = error.config?.method;
+        const message = error.response?.data?.message || error.message || 'No error message';
+        console.error('API Error →', `Status: ${status}, URL: ${method?.toUpperCase()} ${url}, Message: ${message}`);
         return Promise.reject(error);
     }
 );

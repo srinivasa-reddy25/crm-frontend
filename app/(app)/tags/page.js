@@ -18,7 +18,13 @@ import { Pencil, Trash2, Plus } from "lucide-react"
 import { AddTagsDialog } from "@/components/AddTagsDialog"
 import { EditTagDialog } from "@/components/EditTagDialog"
 
-import { useState, useEffect } from "react"
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getTags } from "@/services/tagsApi"
+import { updateTag } from "@/services/tagsApi"
+import { deleteTag } from "@/services/tagsApi"
+
+import { toast } from "sonner"
+
 
 const Colors = {
     red: 'bg-red-100 text-red-800',
@@ -35,89 +41,81 @@ const Colors = {
     brown: 'bg-brown-100 text-brown-800',
 }
 
-import Cookies from 'js-cookie';
 
 export default function Tags() {
 
-
-    const [Tags, setTags] = useState([]);
-    const [isLoadingTags, setIsLoadingTags] = useState(true);
-    const [tagError, setTagError] = useState(null);
+    const queryClient = useQueryClient();
 
 
+    const {
+        data: tagsData,
+        isLoading: isTagsLoading,
+        isError: isTagsError,
+        error: tagsError,
+    } = useQuery({
+        queryKey: ['tags'],
+        queryFn: getTags,
+    });
 
+    const Tags = tagsData?.tags || [];
 
+    const { mutate: deleteTagMutate, isPending: isDeletingTag } = useMutation({
+        mutationFn: (id) => deleteTag(id),
+        onSuccess: () => {
+            toast.success('Tag deleted successfully!');
+            queryClient.invalidateQueries(['tags']); // refetch tag list
+        },
+        onError: (error) => {
+            console.error('Error deleting tag:', error);
+            toast.error(error?.response?.data?.error || 'Failed to delete tag');
+        },
+    });
 
-    useEffect(() => {
-        const fetchTags = async () => {
-            try {
-                setIsLoadingTags(true);
-                setTagError(null);
-                const token = Cookies.get('auth');
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tags`, {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
-                });
-                if (!response.ok) {
-                    throw new Error('Failed to fetch tags');
-                }
-                const data = await response.json();
-                // console.log('Fetched tags:', data.tags);
-                setTags(data.tags || []);
-                console.log("Available Tags:", data.tags);
-            } catch (error) {
-                console.error('Error fetching tags:', error);
-                setTagError('Could not load tags');
-            } finally {
-                setIsLoadingTags(false);
-            }
-        }
-        fetchTags();
+    const { mutate: updateTagMutate, isPending } = useMutation({
+        mutationFn: ({ id, data }) => updateTag(id, data),
+        onMutate: async ({ id, data }) => {
+            await queryClient.cancelQueries(['tags']);
 
+            const previousTags = queryClient.getQueryData(['tags']);
 
-    }, []);
+            queryClient.setQueryData(['tags'], (old) => ({
+                ...old,
+                tags: old.tags.map(tag => tag._id === id ? { ...tag, ...data } : tag)
+            }));
 
-
-
-
-
-    const hadleDeletion = async (tag) => {
-
-        const token = Cookies.get('auth');
-        try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tags/${tag._id}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            })
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to delete tag');
-            }
-            setTags(Tags.filter(t => t._id !== tag._id))
-            alert('Tag deleted successfully!')
-        }
-        catch (error) {
-            console.error('Error deleting tag:', error)
-            alert('Failed to delete tag. Please try again.')
-        }
-    }
+            return { previousTags };
+        },
+        onSuccess: (res) => {
+            toast.success('Tag updated successfully!');
+            queryClient.invalidateQueries(['tags']); // ⬅️ refetch tag list from server
+        },
+        onError: (err) => {
+            console.error('Update failed:', err);
+            toast.error('Failed to update tag');
+        },
+        onSuccess: () => {
+            toast.success('Tag updated!');
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries(['tags']);
+        },
+    });
 
 
     const handleOnclikingDeleteBtn = (tag) => {
-        if (window.confirm('Are you sure you want to delete this contact?')) {
-            hadleDeletion(tag);
+        if (window.confirm(`Are you sure you want to delete the tag "${tag.name}"?`)) {
+            deleteTagMutate(tag._id);
         }
-    }
+    };
 
     const handleTagUpdated = (updatedTag) => {
-        setTags(Tags.map(tag =>
-            tag._id === updatedTag._id ? updatedTag : tag
-        ))
-    }
+        updateTagMutate({ id: updatedTag._id, data: updatedTag });
+    };
+
+
+
+    if (isTagsLoading) return <p>Loading tags...</p>;
+    if (isTagsError) return <p>Error loading tags: {tagsError?.message}</p>;
 
 
 
@@ -167,6 +165,7 @@ export default function Tags() {
                                             <Trash2
                                                 className="w-4 h-4 text-red-500 "
                                             />
+                                            {/* {isDeletingTag ? 'Deleting...' : 'Delete'} */}
                                         </Button>
 
                                     </div>

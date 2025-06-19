@@ -23,76 +23,39 @@ import { Pagination } from "@/components/ui/pagination"
 
 import { AddContactDialog } from "@/components/AddContactDialog"
 
-import Cookies from "js-cookie"
 import { Card } from "@/components/ui/card"
 
 import { useState } from "react";
 
 import { useRouter } from "next/navigation"
-import { useEffect } from "react";
+
 
 import { ImportCsvDialog } from "@/components/ImportCsvDialog"
 
-import { deleteContact } from '@/app/utilities/deletecontact'
-import { deteleBulkContacts } from "@/app/utilities/deletecontact"
+import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 
-const contacts = [
-    {
-        id: "X7d93kA8sLp0wErTgqVn91UyZbNmKj2L",
-        initials: "JS",
-        name: "John Smith",
-        email: "john.smith@techcorp.com",
-        company: "TechCorp",
-        tags: ["Hot Lead", "VIP"],
-        tagColors: ["destructive", "secondary"],
-        lastInteraction: "2 days ago"
-    },
-    {
-        id: "Lk7Tq29VmzXnO8RbPd5cYu9AaJrM6s1F",
-        initials: "SJ",
-        name: "Sarah Johnson",
-        email: "sarah.j@startupxyz.com",
-        company: "StartupXYZ",
-        tags: ["Customer", "Follow-up"],
-        tagColors: ["success", "warning"],
-        lastInteraction: "1 week ago"
-    },
-    {
-        id: "A9fDs28PbK0zVeLtXqMnR7HwUcGjL3oK",
-        initials: "MD",
-        name: "Mike Davis",
-        email: "mike.davis@globalinc.com",
-        company: "GlobalInc",
-        tags: ["Prospect"],
-        tagColors: ["info"],
-        lastInteraction: "3 days ago"
-    },
-    {
-        id: "YpF38Wd7lQmTuVzXoNKr92HaMbJkLt0E",
-        initials: "EW",
-        name: "Emily Wilson",
-        email: "emily.wilson@localbiz.com",
-        company: "LocalBiz",
-        tags: ["Customer", "VIP"],
-        tagColors: ["success", "secondary"],
-        lastInteraction: "5 days ago"
-    }
-];
+import { getContacts } from '@/services/contactsApi';
+import { deleteContact } from '@/services/contactsApi'
+import { bulkDeleteContacts } from "@/services/contactsApi"
+import { getTags } from "@/services/tagsApi"
 
-
+import { toast } from "sonner";
 
 
 
 function Contact() {
     const router = useRouter();
     const [viewMode, setViewMode] = useState("table");
-    const [contacts, setContacts] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState(null);
+    // const [contacts, setContacts] = useState([]);
+    // const [isLoading, setIsLoading] = useState(true);
+    // const [error, setError] = useState(null);
     const [selectedContactIds, setSelectedContactIds] = useState([]);
-    const [availableTags, setAvailableTags] = useState([]);
+    // const [availableTags, setAvailableTags] = useState([]);
     const [selectedTags, setSelectedTags] = useState([]);
+    const queryClient = useQueryClient();
+
 
 
 
@@ -101,47 +64,112 @@ function Contact() {
     const [itemsPerPage, setItemsPerPage] = useState(10)
 
 
+    const {
+        data: tagsData,
+        isLoading: isTagsLoading,
+        isError: isTagsError,
+        error: tagsError,
+    } = useQuery({
+        queryKey: ['tags'],
+        queryFn: getTags,
+    });
+
+    const availableTags = tagsData?.tags || [];
+
+
+    const {
+        data: contactData,
+        isLoading: isContactsLoading,
+        isError: isContactsError,
+        error: contactsError,
+    } = useQuery({
+        queryKey: ['contacts', { selectedTags }],
+        queryFn: () => {
+            if (selectedTags.length === 0 || selectedTags.length === availableTags.length) {
+                return getContacts();
+            }
+
+            if (selectedTags.length === 1) {
+                return getContacts({ tag: selectedTags[0] });
+            }
+
+            const matchType = 'all';
+            return getContacts({ tags: selectedTags.join(','), matchType });
+        },
+        enabled: !!availableTags.length,
+    });
+    const contacts = contactData?.contacts || [];
+
+
+    console.log("Contacts Data:", contacts);
+    const fallbackContacts = [
+        {
+            id: "X7d93kA8sLp0wErTgqVn91UyZbNmKj2L",
+            initials: "JS",
+            name: "John Smith",
+            email: "john.smith@techcorp.com",
+            company: "TechCorp",
+            tags: ["Hot Lead", "VIP"],
+            tagColors: ["destructive", "secondary"],
+            lastInteraction: "2 days ago",
+        },
+    ];
+    const displayContacts = isContactsError ? fallbackContacts : contacts;
+    console.log("Contacts:", displayContacts);
+
+
+
+    const { mutate: deleteContactMutate, isPending: isDeleting } = useMutation({
+        mutationFn: deleteContact,
+        onSuccess: (_, contactId) => {
+            alert('Contact deleted successfully!');
+            queryClient.invalidateQueries(['contacts']);
+        },
+        onError: (error) => {
+            console.error('Failed to delete contact:', error);
+            alert('Failed to delete contact. Please try again later.');
+        },
+    });
+
+    const { mutate: bulkDeleteMutate, isPending: isBulkDeleting } = useMutation({
+        mutationFn: bulkDeleteContacts,
+        onSuccess: () => {
+            alert('Contacts deleted successfully!');
+            queryClient.invalidateQueries(['contacts']);
+            setSelectedContactIds([]);
+        },
+        onError: (error) => {
+            console.error('Failed to delete contacts:', error);
+            alert('Failed to delete contacts. Please try again later.');
+        }
+    });
+
+
+
     const getInitials = (name) =>
         name ? name.split(' ').map(n => n[0]).join('').toUpperCase() : ''
-
 
     const onClikingContactDetails = (contactId) => {
         console.log("Contact clicked", contactId);
         router.push(`/contacts/${contactId}`);
     }
 
-
-    const handleDeleteClick = async (contactId) => {
+    const handleDeleteClick = (contactId) => {
         if (window.confirm('Are you sure you want to delete this contact?')) {
-            const result = await deleteContact(contactId);
-            console.log("Delete result:", result);
-            if (result) {
-                alert('Contact deleted successfully!');
-                setContacts(prevContacts => prevContacts.filter(contact => contact._id !== contactId));
-            }
-            else {
-                alert('Failed to delete contact. Please try again later.');
-            }
+            deleteContactMutate(contactId);
         }
-    }
+    };
 
-    const handleBulkDelete = async () => {
+    const handleBulkDelete = () => {
         if (selectedContactIds.length === 0) {
             alert('No contacts selected for deletion.');
             return;
         }
 
         if (window.confirm(`Are you sure you want to delete ${selectedContactIds.length} contact(s)?`)) {
-            const result = await deteleBulkContacts(selectedContactIds);
-            if (result) {
-                alert('Contacts deleted successfully!');
-                setContacts(prevContacts => prevContacts.filter(contact => !selectedContactIds.includes(contact._id)));
-                setSelectedContactIds([]);
-            } else {
-                alert('Failed to delete contacts. Please try again later.');
-            }
+            bulkDeleteMutate(selectedContactIds);
         }
-    }
+    };
 
     const getTimeAgo = (date) => {
         const now = new Date();
@@ -165,11 +193,6 @@ function Contact() {
             return diffDays === 1 ? "1 day ago" : `${diffDays} days ago`;
         }
     };
-
-    const onClickingEditonContactDetails = (contactId) => {
-        // console.log("Edit Contact clicked", contactId);
-        router.push(`/contacts/${contactId}?isEditMode=true`);
-    }
 
     const handleTagFilter = (tagId) => {
         let newSelectedTags;
@@ -199,166 +222,19 @@ function Contact() {
         // applyTagFilters(newSelectedTags);
     };
 
-
-    const fetchContacts = async () => {
-        const token = Cookies.get('auth');
-        try {
-            setIsLoading(true);
-            // Replace with your actual API endpoint
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/contacts`, {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error(`Error: ${response.status}`);
-            }
-
-            const data = await response.json();
-            console.log("Fetched Contacts:", data.contacts);
-            setContacts(data.contacts);
-            setError(null);
-        } catch (err) {
-            console.error('Error fetching contacts:', err);
-            setError('Failed to load contacts. Please try again later.');
-            // Fallback to demo data if API fails
-            setContacts([
-                {
-                    id: "X7d93kA8sLp0wErTgqVn91UyZbNmKj2L",
-                    initials: "JS",
-                    name: "John Smith",
-                    email: "john.smith@techcorp.com",
-                    company: "TechCorp",
-                    tags: ["Hot Lead", "VIP"],
-                    tagColors: ["destructive", "secondary"],
-                    lastInteraction: "2 days ago"
-                },
-            ]);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
     const handlePageChange = (page) => {
         setCurrentPage(page)
-        // Optionally scroll to top of list
         window.scrollTo(0, 0)
     }
 
 
-    useEffect(() => {
-        const token = Cookies.get("auth")
 
-        const filterByTag = async (tagId) => {
-            setIsLoading(true);
-            try {
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/contacts?tag=${tagId}`, {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
-                });
-                if (!response.ok) {
-                    throw new Error(`Error: ${response.status}`);
-                }
-                const data = await response.json();
-                console.log("Fetched Contacts:", data.contacts);
-                setContacts(data.contacts);
-                setError(null);
-
-            } catch (error) {
-                console.error('Error fetching contacts:', error);
-                setError('Failed to load contacts by tag. Please try again later.');
-
-            }
-            finally {
-                setIsLoading(false);
-            }
-
-            // Handle response
-        }
-
-        const filterByMultipleTags = async (tagIds, matchAll = false) => {
-            try {
-                setIsLoading(true);
-
-                const tagParams = tagIds.join(',');
-                const matchType = matchAll ? 'all' : 'any';
-
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/contacts?tags=${tagParams}&matchType=${matchType}`, {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
-                });
-
-                if (!response.ok) {
-                    throw new Error(`Error: ${response.status}`);
-                }
-
-                const data = await response.json();
-                console.log("Fetched Contacts:", data.contacts);
-                setContacts(data.contacts);
-                setError(null);
-            } catch (err) {
-                console.error('Error fetching contacts:', err);
-                setError('Failed to load contacts by tags . Please try again later.');
-            } finally {
-                setIsLoading(false);
-            }
-        }
-
-        if (selectedTags.length === 1) {
-            filterByTag(selectedTags[0])
-        }
-        else if (selectedTags.length === 0 || selectedTags.length === availableTags.length) {
-            fetchContacts();
-        }
-        else {
-            filterByMultipleTags(selectedTags, true)
-        }
-
-
-    }, [selectedTags])
-
-
-    useEffect(() => {
-
-        fetchContacts();
-
-        const fetchTags = async () => {
-            console.log('Fetching tags...');
-            try {
-                // setIsLoadingTags(true);
-                // setTagError(null);
-
-                const token = Cookies.get('auth');
-
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tags`, {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to fetch tags');
-                }
-
-                const data = await response.json();
-                // console.log('Fetched tags:', data.tags);
-                setAvailableTags(data.tags || []);
-                console.log("Available Tags:", data.tags);
-            } catch (error) {
-                console.error('Error fetching tags:', error);
-                // setTagError('Could not load tags');
-            } finally {
-                // setIsLoadingTags(false);
-            }
-        }
-        fetchTags();
-
-    }, []);
-
-
+    if (isContactsLoading) {
+        return <p className="text-muted-foreground">Loading contacts...</p>;
+    }
+    if (isContactsError) {
+        return <p className="text-red-500">Error loading contacts: {contactsError}</p>;
+    }
 
 
 
@@ -443,7 +319,7 @@ function Contact() {
                     </div>
                 </div>
                 {
-                    isLoading && <p className="text-muted-foreground">Loading contacts...</p>
+                    isContactsLoading && <p className="text-muted-foreground">Loading contacts...</p>
                 }
                 {selectedContactIds.length > 0 && (
                     <div className="border rounded-md p-4 flex justify-between items-center bg-muted">
@@ -487,7 +363,7 @@ function Contact() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {contacts.map((contact, index) => (
+                                {displayContacts.map((contact, index) => (
                                     <TableRow key={index}>
                                         <TableCell>
                                             <Checkbox
@@ -538,7 +414,7 @@ function Contact() {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onClick={() => onClickingEditonContactDetails(contact._id)}>
+                                                    <DropdownMenuItem onClick={() => router.push(`/contacts/${contact._id}?isEditMode=true`)}>
                                                         <SquarePen /> Edit
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem
@@ -559,7 +435,7 @@ function Contact() {
                 ) :
                     (
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-4">
-                            {contacts.map((contact, index) => (
+                            {displayContacts.map((contact, index) => (
                                 <Card key={index} className="p-4">
                                     <div className="flex items-start justify-between">
                                         <div className="flex items-center gap-2">
@@ -595,7 +471,7 @@ function Contact() {
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuItem
-                                                    onClick={() => onClickingEditonContactDetails(contact._id)}
+                                                    onClick={() => router.push(`/contacts/${contact._id}?isEditMode=true`)}
                                                 >
                                                     Edit
                                                 </DropdownMenuItem>
@@ -641,9 +517,6 @@ function Contact() {
                     totalPages={totalPages}
                     onPageChange={handlePageChange}
                 /> */}
-
-
-
             </div>
         </>
     )
