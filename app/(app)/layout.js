@@ -1,7 +1,5 @@
 import { AppSidebar } from '@/components/app-sidebar';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
-import { ModeToggle } from "@/components/mode-toggle";
-import { ThemeProvider } from "@/components/ui/theme-provider";
 
 import { SidebarInset } from '@/components/ui/sidebar';
 

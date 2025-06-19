@@ -151,6 +151,7 @@ export function ContactDetails() {
       updatedAt: new Date(),
       lastInteraction: new Date()
     };
+    console.log("Update Data: ", updateData);
 
     updateContactMutate({ id: contactId, data: updateData });
   };
@@ -326,23 +327,7 @@ export function ContactDetails() {
               <Building className="inline  mr-1 text-muted-foreground" />
               <div>
                 <p className="text-sm text-muted-foreground">Company</p>
-                {/* <p className="text-lg font-medium">{contact.company.name}</p> */}
-                {isEditMode ? (
-                  <input
-                    type="text"
-                    name="company"
-                    value={formData.company?.name || ''}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        company: { ...formData.company, name: e.target.value },
-                      })
-                    }
-                    className="text-sm px-2 py-1 mt-1 border rounded-md w-full text-muted-foreground"
-                  />
-                ) : (
-                  <p className="text-lg font-medium">{contact.company ? contact.company.name : "--"}</p>
-                )}
+                <p className="text-lg font-medium">{contact.company?.name || "--"}</p>
               </div>
             </div>
 
