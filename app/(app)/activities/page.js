@@ -18,6 +18,21 @@ import { formatDistanceToNow } from "date-fns";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import axiosInstance from "@/services/axiosInstance";
 
+
+
+import CalendarDialog from "@/components/calenderDialog";
+
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+
+import { useRef, useEffect, useState } from "react";
+
+
 const iconMap = {
     contact_created: <Plus className="h-4 w-4 text-green-500" />,
     contact_deleted: <Trash2 className="h-4 w-4 text-red-500" />,
@@ -29,6 +44,10 @@ const iconMap = {
 };
 
 function Activities() {
+    const [selectedAction, setSelectedAction] = useState("all");
+    const [dateRange, setDateRange] = useState();
+
+
     const {
         data,
         fetchNextPage,
@@ -38,16 +57,58 @@ function Activities() {
         isError,
         error,
     } = useInfiniteQuery({
-        queryKey: ["activities"],
-        queryFn: async ({ pageParam = 1 }) => {
-            const res = await axiosInstance.get(`/activities?page=${pageParam}&limit=20`);
+        queryKey: ["activities", selectedAction, dateRange],
+        queryFn: async ({ pageParam = null }) => {
+            const res = await axiosInstance.get('/activities', {
+                params: {
+                    limit: 10,
+                    cursor: pageParam,
+                    action: selectedAction === "all" ? undefined : selectedAction,
+                    startDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
+                    endDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
+                },
+            });
             return res.data;
         },
-        getNextPageParam: (lastPage, allPages) => {
-            return lastPage.activities.length === 20 ? allPages.length + 1 : undefined;
-        },
+        getNextPageParam: (lastPage) => lastPage.nextCursor || undefined,
     });
+
+
+
+
+
+    // console.log("Next cursor:", data?.pages[data.pages.length - 1]?.nextCursor);
+
     // console.log("Activities data:", data);
+
+
+
+
+
+    // const loadMoreRef = useRef();
+
+    // useEffect(() => {
+    //     if (!hasNextPage || isFetchingNextPage) return;
+
+    //     const observer = new IntersectionObserver((entries) => {
+    //         if (entries[0].isIntersecting) {
+    //             fetchNextPage();
+    //         }
+    //     });
+
+    //     if (loadMoreRef.current) {
+    //         observer.observe(loadMoreRef.current);
+    //     }
+
+    //     return () => {
+    //         if (loadMoreRef.current) {
+    //             observer.unobserve(loadMoreRef.current);
+    //         }
+    //     };
+    // }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+
+
 
     return (
         <>
@@ -66,6 +127,63 @@ function Activities() {
                     </Breadcrumb>
                 </div>
             </header>
+            <div className="flex flex-wrap items-center justify-between px-4 gap-2 sm:gap-4 py-4 bg-background">
+                <div className="flex flex-wrap gap-2 sm:gap-4 items-center">
+
+                    <CalendarDialog onApply={(range) => setDateRange(range)} />
+
+                    <Select
+                        value={selectedAction}
+                        onValueChange={(value) => setSelectedAction(value)}
+                    >
+                        <SelectTrigger className="w-[180px] sm:w-[200px]">
+                            <SelectValue placeholder="Filter by action" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Actions</SelectItem>
+                            <SelectItem value="contact_created">Contact Created</SelectItem>
+                            <SelectItem value="contact_deleted">Contact Deleted</SelectItem>
+                            <SelectItem value="contact_updated">Contact Updated</SelectItem>
+                            <SelectItem value="bulk_delete">Bulk Delete</SelectItem>
+                            <SelectItem value="bulk_import">Bulk Import</SelectItem>
+                            <SelectItem value="user_login">User Login</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+
+                <Button
+                    variant="ghost"
+                    className="text-sm"
+                    onClick={() => {
+                        setSelectedAction("");
+                        setDateRange(undefined);
+                        refetch();
+                    }}
+                >
+                    Clear Filters
+                </Button>
+            </div>
+
+            {(selectedAction || dateRange?.from) && (
+                <div className="text-center text-sm text-muted-foreground mb-4">
+                    <span className="inline-block">
+                        {selectedAction && (
+                            <>
+                                Action: <strong className="capitalize">{selectedAction.replace("_", " ")}</strong>
+                            </>
+                        )}
+                        {selectedAction && dateRange?.from && " | "}
+                        {dateRange?.from && (
+                            <>
+                                Date: <strong>{dateRange.from.toDateString()}</strong>
+                                {dateRange.to && <> → <strong>{dateRange.to.toDateString()}</strong></>}
+                            </>
+                        )}
+                    </span>
+                </div>
+            )}
+
+
 
             <div className="flex flex-1 flex-col gap-4 p-4 pt-0 bg-light dark:bg-dark overflow-y-auto">
                 {isLoading ? (
@@ -116,15 +234,21 @@ function Activities() {
                                                         {Object.entries(activity.details.changes).map(([field, val]) => (
                                                             <li key={field}>
                                                                 <span className="capitalize">{field}</span>:{" "}
-                                                                <span className="text-red-500 line-through">{val.from}</span> →{" "}
-                                                                <span className="text-green-600">{val.to}</span>
+                                                                <span className="text-red-500 line-through">
+                                                                    {Array.isArray(val.from) ? val.from.join(', ') : val.from}
+                                                                </span>{" "}
+                                                                →{" "}
+                                                                <span className="text-green-600">
+                                                                    {Array.isArray(val.to) ? val.to.join(', ') : val.to}
+                                                                </span>
                                                             </li>
                                                         ))}
                                                     </ul>
                                                 </div>
                                             )}
 
-                                            {activity.action === "user_logout" && (
+
+                                            {/* {activity.action === "user_logout" && (
                                                 <div className="space-y-1">
                                                     <p className="text-muted-foreground text-sm">
                                                         User <span className="font-medium">{activity.entityName}</span> logged out.
@@ -133,7 +257,8 @@ function Activities() {
                                                         <p className="text-sm text-muted-foreground">Email: {activity.details.email}</p>
                                                     )}
                                                 </div>
-                                            )}
+                                            )} */}
+
                                             {activity.action === "user_login" && (
                                                 <div className="space-y-1">
                                                     <p className="text-muted-foreground text-sm">
@@ -213,6 +338,13 @@ function Activities() {
                                 </Button>
                             </div>
                         )}
+                        {/* {hasNextPage && (
+                            <div ref={loadMoreRef} className="text-center mt-4">
+                                <Loader2 className="animate-spin mx-auto text-muted-foreground" />
+                                <p className="text-sm text-muted-foreground mt-1">Loading more...</p>
+                            </div>
+                        )} */}
+
 
                         {!hasNextPage && (
                             <p className="text-center text-muted-foreground text-sm">

@@ -67,7 +67,7 @@ export default function Tags() {
         },
         onError: (error) => {
             console.error('Error deleting tag:', error);
-            toast.error(error?.response?.data?.error || 'Failed to delete tag');
+            toast.error((error?.response?.data?.message,error?.response?.data?.contactCount) || 'Failed to delete tag');
         },
     });
 
