@@ -11,11 +11,11 @@ import {
   PieChart,
   Settings2,
   SquareTerminal,
-  LayoutDashboard ,
+  LayoutDashboard,
   NotebookTabs,
-  Activity ,
-  Tags ,
-  Bot ,
+  Activity,
+  Tags,
+  Bot,
 } from "lucide-react"
 
 
@@ -212,32 +212,32 @@ export function AppSidebar({ ...props }) {
     },
   }
 
-  const navData=[
-  {
-    title: "Dashboard",
-    url: "/dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    title: "Contacts",
-    url: "/contacts",
-    icon: NotebookTabs,
-  },
-  {
-    title: "Activities",
-    url: "/activities",
-    icon: Activity,
-  },
-  {
-    title: "Tags",
-    url: "/tags",
-    icon: Tags,
-  },
-  {
-    title: "AI Assistant",
-    url: "/assistant",
-    icon: Bot,
-  }
+  const navData = [
+    {
+      title: "Dashboard",
+      url: "/dashboard",
+      icon: LayoutDashboard,
+    },
+    {
+      title: "Contacts",
+      url: "/contacts",
+      icon: NotebookTabs,
+    },
+    {
+      title: "Activities",
+      url: "/activities",
+      icon: Activity,
+    },
+    {
+      title: "Tags",
+      url: "/tags",
+      icon: Tags,
+    },
+    {
+      title: "AI Assistant",
+      url: "/chat",
+      icon: Bot,
+    }
   ]
 
 
