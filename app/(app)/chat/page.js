@@ -37,12 +37,16 @@ export default function Chat() {
     const viewportRef = useRef(null);
     const socketRef = useRef(null);
     // const [conversationId, setConversationId] = useState("current");
-    const [selectedConversation, setSelectedConversation] = useState(null);
+    const [selectedConversation, setSelectedConversation] = useState({ _id: "new" });
+    const selectedConversationRef = useRef({ _id: "new" });
 
-    console.log("selectedConversation:", selectedConversation);
+    // console.log("selectedConversationRef:", selectedConversationRef.current);
 
 
-    const { data: conversations, isLoading, error } = useQuery({
+    // console.log("selectedConversation:", selectedConversation);
+
+
+    const { data: conversations, isLoading, error, refetch } = useQuery({
         queryKey: ["conversations"],
         queryFn: async () => {
             const userId = "current";
@@ -50,19 +54,32 @@ export default function Chat() {
         }
     });
 
-    console.log("Conversations:", conversations);
 
 
     useEffect(() => {
 
+        if (
+            !selectedConversation ||
+            !socketRef.current ||
+            !socketRef.current.connected
+        ) {
+            return;
+        }
+
+        selectedConversationRef.current = selectedConversation;
+
         console.log("Selected conversation changed:", selectedConversation);
 
-        if (!selectedConversation) {
+
+        if (selectedConversation?._id === "new") {
+            console.log("New conversation selected, clearing messages.");
             setMessages([]);
             return;
         }
 
         setMessages([]);
+
+        // console.log("Requesting chat history for conversation ID:", selectedConversation._id);
 
         socketRef.current.emit("get-chat-history", {
             conversationId: selectedConversation._id
@@ -78,13 +95,33 @@ export default function Chat() {
                     socketRef.current = socket;
                 });
 
-                console.log("🔌 Socket instance:", socketInstance);
+                console.log("Socket instance:", socketInstance);
 
                 if (!socketInstance) return;
 
-                socketInstance.on("new-message", (msg) => {
-                    setMessages((prev) => [...prev, msg]);
+                socketInstance.on("new-message", async (payload) => {
+                    const currentConversation = selectedConversationRef.current
+
+                    console.log("Received new message:", payload);
+                    console.log("Current conversation ID:", currentConversation?._id);
+                    console.log("Payload conversation ID:", payload.conversationId);
+
+                    if (!currentConversation?._id) {
+                        toast.error("No active conversation selected");
+                        return;
+                    }
+
+                    if (
+                        currentConversation._id === 'new' &&
+                        payload.conversationId &&
+                        currentConversation._id !== payload.conversationId
+                    ) {
+                        await refetch();
+                        setSelectedConversation({ _id: payload.conversationId });
+                    }
+                    setMessages((prev) => [...prev, payload]);
                 });
+
 
                 socketInstance.on("ai-typing", setIsTyping);
                 socketInstance.on("chat-history", (history) => {
@@ -130,8 +167,12 @@ export default function Chat() {
         setMessages((prev) => [...prev, userMsg]);
         setInput("");
 
+        console.log("Sending message via socket:", input);
+        console.log("Selected conversation ID:", selectedConversation?._id);
+
         if (socketRef.current) {
             socketRef.current.emit("send-message", { message: input, conversationId: selectedConversation._id });
+            console.log("conversationId:", selectedConversation._id);
         } else {
             toast({ title: "Not connected", description: "Socket not ready." });
         }
@@ -184,7 +225,7 @@ export default function Chat() {
                     <ConversationList
                         conversations={conversations}
                         isLoading={isLoading}
-                        onSelect={(conv) => setSelectedConversation(conv)}
+                        onSelect={(conv) => setSelectedConversation(conv || { _id: "new" })}
                         selectedId={selectedConversation?._id}
                     />
                 </div>

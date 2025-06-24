@@ -11,7 +11,7 @@ export function ConversationList({ conversations = [], isLoading, onSelect, sele
             <Button
                 variant="outline"
                 className="w-full mb-4 flex items-center gap-2"
-                onClick={() => onSelect("new")}
+                onClick={() => onSelect(null)}
             >
                 <PlusIcon className="w-4 h-4" />
                 New Chat
