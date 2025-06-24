@@ -6,13 +6,11 @@ export function Pagination({
     totalPages,
     onPageChange
 }) {
-    // Don't render pagination if there's only 1 page
     if (totalPages <= 1) return null;
 
     const renderPageButtons = () => {
         const pages = [];
 
-        // Always show first page
         pages.push(
             <Button
                 key={1}
@@ -24,11 +22,9 @@ export function Pagination({
             </Button>
         );
 
-        // Calculate range of visible pages
         let startPage = Math.max(2, currentPage - 1);
         let endPage = Math.min(totalPages - 1, currentPage + 1);
 
-        // Show ellipsis if needed before middle pages
         if (startPage > 2) {
             pages.push(
                 <Button key="start-ellipsis" variant="outline" size="icon" disabled>
@@ -36,8 +32,6 @@ export function Pagination({
                 </Button>
             );
         }
-
-        // Add middle pages
         for (let i = startPage; i <= endPage; i++) {
             pages.push(
                 <Button
@@ -50,8 +44,6 @@ export function Pagination({
                 </Button>
             );
         }
-
-        // Show ellipsis if needed after middle pages
         if (endPage < totalPages - 1) {
             pages.push(
                 <Button key="end-ellipsis" variant="outline" size="icon" disabled>
@@ -59,8 +51,6 @@ export function Pagination({
                 </Button>
             );
         }
-
-        // Always show last page if more than 1 page
         if (totalPages > 1) {
             pages.push(
                 <Button
