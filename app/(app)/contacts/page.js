@@ -32,8 +32,7 @@ import { useRouter } from "next/navigation"
 
 import { ImportCsvDialog } from "@/components/ImportCsvDialog"
 
-import { useQuery } from '@tanstack/react-query';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 
 
 import { getContacts } from '@/services/contactsApi';
@@ -48,11 +47,7 @@ import { toast } from "sonner";
 function Contact() {
     const router = useRouter();
     const [viewMode, setViewMode] = useState("table");
-    // const [contacts, setContacts] = useState([]);
-    // const [isLoading, setIsLoading] = useState(true);
-    // const [error, setError] = useState(null);
     const [selectedContactIds, setSelectedContactIds] = useState([]);
-    // const [availableTags, setAvailableTags] = useState([]);
     const [selectedTags, setSelectedTags] = useState([]);
     const queryClient = useQueryClient();
     const [searchQuery, setSearchQuery] = useState("");

@@ -16,11 +16,6 @@ import {
     signInWithRedirect,
     getRedirectResult
 } from 'firebase/auth';
-
-
-
-
-
 const storeAuthCookie = (token) => {
     document.cookie = `auth=${token}; path=/; max-age=3600; SameSite=Strict; Secure`;
 };
@@ -55,7 +50,7 @@ export function AuthProvider({ children }) {
 
 
     const syncWithBackend = async (firebaseUser, endpoint) => {
-        console.log("second step, syncing with backend : ",firebaseUser);
+        console.log("second step, syncing with backend : ", firebaseUser);
         const token = await firebaseUser.getIdToken();
 
         const metadata = {
@@ -118,7 +113,7 @@ export function AuthProvider({ children }) {
 
             const token = await result.user.getIdToken();
             storeAuthCookie(token); // Store token in cookie
-            
+
             console.log("Google auth backend response:", data);
 
             // Navigate based on whether this is a new user or not
@@ -168,12 +163,13 @@ export function AuthProvider({ children }) {
             const token = await userCredential.user.getIdToken();
             storeAuthCookie(token);
             await syncWithBackend(userCredential.user, "login");
-            router.push('/'); // Redirect to home page, not dashboard
+            router.push('/');
         } catch (error) {
-            console.error("Login error:", error);
-            throw error;
+            console.log("Login error:", error);
+            throw error; // rethrow the actual Firebase error
         }
     };
+
 
     const register = async (displayName, email, password) => {
         if (!/\S+@\S+\.\S+/.test(email)) {
@@ -186,7 +182,7 @@ export function AuthProvider({ children }) {
         await updateProfile(userCredential.user, { displayName });
 
         const token = await userCredential.user.getIdToken();
-        storeAuthCookie(token); 
+        storeAuthCookie(token);
 
         await syncWithBackend(userCredential.user, "register");
 

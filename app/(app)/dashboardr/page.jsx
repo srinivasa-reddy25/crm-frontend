@@ -34,7 +34,7 @@ export default function Page() {
                 <BreadcrumbSeparator className="hidden md:block" />
                 <BreadcrumbItem>
                   <BreadcrumbPage>Data Fetching</BreadcrumbPage>
-                </BreadcrumbItem>
+                </BreadcrumbItem> 
               </BreadcrumbList>
             </Breadcrumb>
           </div>

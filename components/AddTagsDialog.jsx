@@ -16,6 +16,12 @@ import { Input } from '@/components/ui/input'
 import { Tag, Plus, X } from 'lucide-react'
 import Cookies from 'js-cookie'
 
+import { toast } from 'sonner'
+
+
+import { useQueryClient } from '@tanstack/react-query'
+
+
 // Utility to compute readable text color (black or white) for any background
 function getReadableTextColor(hex) {
     if (!hex || hex[0] !== '#') return '#000000'
@@ -32,6 +38,8 @@ export function AddTagsDialog({ contactId, onTagsAdded }) {
     const [selectedColor, setSelectedColor] = useState('#808080')
     const [tags, setTags] = useState([])
     const [isOpen, setIsOpen] = useState(false)
+
+    const queryClient = useQueryClient()
 
     const handleAddTag = () => {
         const name = tagInput.trim()
@@ -54,7 +62,7 @@ export function AddTagsDialog({ contactId, onTagsAdded }) {
 
     const handleSubmit = async () => {
         if (tags.length === 0) {
-            alert('Please add at least one tag.')
+            toast.error('Please add at least one tag.')
             return
         }
 
@@ -71,13 +79,17 @@ export function AddTagsDialog({ contactId, onTagsAdded }) {
             const data = await response.json()
             if (!response.ok) throw new Error(data.message || 'Failed to add tags')
 
-            alert('Tags added successfully!')
+            // alert('Tags added successfully!')
+            toast.success('Tags added successfully!')
             if (onTagsAdded) onTagsAdded(tags)
             setTags([])
             setIsOpen(false)
+            queryClient.invalidateQueries({ queryKey: ['tags'] })
         } catch (error) {
             console.error('Error adding tags:', error)
-            alert('Failed to add tags. Please try again.')
+            toast.error('Failed to add tags. Please try again.')
+            // alert('Failed to add tags. Please try again.')
+            setIsOpen(false)
         }
     }
 

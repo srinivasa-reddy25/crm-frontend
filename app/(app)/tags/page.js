@@ -17,6 +17,7 @@ import { Pencil, Trash2, Plus } from "lucide-react"
 
 import { AddTagsDialog } from "@/components/AddTagsDialog"
 import { EditTagDialog } from "@/components/EditTagDialog"
+import ConfirmDialog from "@/components/ConfirmDialog"
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getTags } from "@/services/tagsApi"
@@ -93,11 +94,11 @@ export default function Tags() {
     });
 
 
-    const handleOnclikingDeleteBtn = (tag) => {
-        if (window.confirm(`Are you sure you want to delete the tag "${tag.name}"?`)) {
-            deleteTagMutate(tag._id);
-        }
-    };
+    // const handleOnclikingDeleteBtn = (tag) => {
+    //     if (window.confirm(`Are you sure you want to delete the tag "${tag.name}"?`)) {
+    //         deleteTagMutate(tag._id);
+    //     }
+    // };
 
     const handleTagUpdated = (updatedTag) => {
         updateTagMutate({ id: updatedTag._id, data: updatedTag });
@@ -145,7 +146,7 @@ export default function Tags() {
                             <CardContent className="flex flex-col gap-2 p-4">
                                 <div className="flex items-center justify-between">
                                     <Badge
-                                        className={`text-sm px-2 py-1 rounded-full font-medium ` }
+                                        className={`text-sm px-2 py-1 rounded-full font-medium `}
                                         style={{ backgroundColor: tag.color || "gray" }}
                                         title={tag.name}
                                     >
@@ -156,12 +157,16 @@ export default function Tags() {
                                             tag={tag}
                                             onTagUpdated={handleTagUpdated}
                                         />
-                                        <Button className={"cursor-pointer"} variant="ghost" size="icon" onClick={() => handleOnclikingDeleteBtn(tag)}>
-                                            <Trash2
-                                                className="w-4 h-4 text-red-500 "
-                                            />
-                                            {/* {isDeletingTag ? 'Deleting...' : 'Delete'} */}
-                                        </Button>
+                                        <ConfirmDialog
+                                            trigger={<Button className={"cursor-pointer"} variant="ghost" size="icon">
+                                                <Trash2
+                                                    className="w-4 h-4 text-red-500 "
+                                                />
+                                            </Button>
+                                            }
+                                            title={`Delete tag "${tag.name}"?`}
+                                            onConfirm={() => deleteTagMutate(tag._id)}
+                                        />
 
                                     </div>
                                 </div>

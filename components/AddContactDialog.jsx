@@ -25,17 +25,26 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 
+
+import { useQueryClient } from '@tanstack/react-query';
+
 import Cookies from 'js-cookie';
+
+import { toast } from 'sonner';
 
 
 import clsx from 'clsx';
 
 export function AddContactDialog() {
 
+    const queryClient = useQueryClient();
+
 
     const [availableTags, setAvailableTags] = useState([]);
     const [isLoadingTags, setIsLoadingTags] = useState(false);
     const [tagError, setTagError] = useState(null);
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+
 
     // const availableTags = ['VIP', 'Lead', 'New', 'Follow-Up', 'Important'];
 
@@ -89,12 +98,17 @@ export function AddContactDialog() {
             }
             const result = await response.json();
             console.log('Contact created successfully:', result);
-            reset(); 
+            toast.success('Contact created successfully!');
 
-            // alert('Contact created successfully!');
+            reset();
+
+            setIsDialogOpen(false);
+            
+            queryClient.invalidateQueries({ queryKey: ['contacts'] });
+
         } catch (error) {
             console.error('Error creating contact:', error);
-            // Handle error - show error message
+            toast.error('Failed to create contact. Please try again.');
         }
     };
 
@@ -138,7 +152,7 @@ export function AddContactDialog() {
 
 
     return (
-        <Dialog>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
                 <Button>Add Contact</Button>
             </DialogTrigger>

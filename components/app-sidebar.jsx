@@ -23,10 +23,6 @@ import AuthContext from "@/components/providers/AuthProvider"
 import { useContext } from "react"
 
 
-
-
-
-
 import { NavMain } from "@/components/nav-main"
 import { NavProjects } from "@/components/nav-projects"
 import { NavUser } from "@/components/nav-user"
@@ -38,6 +34,9 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/components/ui/sidebar"
+
+
+import { useUser } from "./providers/UserContext"
 
 // This is sample data.
 const data = {
@@ -197,12 +196,16 @@ const data = {
 export function AppSidebar({ ...props }) {
 
   const { user } = useContext(AuthContext);
+  const {userData} = useUser();
+
+  console.log("DBuser:", userData);
+  // console.log("AppSidebar user:", user);
 
   const actualData = user ? {
     user: {
-      name: user.displayName,
-      email: user.email,
-      avatar: "",
+      name: userData.displayName,
+      email: userData.email,
+      avatar: userData.profilePicture,
     },
   } : {
     user: {
@@ -242,7 +245,6 @@ export function AppSidebar({ ...props }) {
 
 
 
-  console.log("AppSidebar user:", user);
   // const { displayName, email, avatar } = user;
   // console.log("AppSidebar user:", user.UserImpl);
   // const User = {
