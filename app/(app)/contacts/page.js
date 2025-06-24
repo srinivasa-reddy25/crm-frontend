@@ -287,10 +287,7 @@ function Contact() {
                         <p className="text-muted-foreground">Manage your contact database</p>
                     </div>
                 </div>
-
-
                 <>
-
                     <div className="flex items-center justify-between gap-2">
                         <div className="flex flex-1 items-center gap-2">
                             <Input type="text" placeholder="Search contacts..." value={searchQuery} className="w-[300px]" onChange={e => setSearchQuery(e.target.value)} />

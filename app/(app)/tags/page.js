@@ -26,22 +26,6 @@ import { deleteTag } from "@/services/tagsApi"
 import { toast } from "sonner"
 
 
-const Colors = {
-    red: 'bg-red-100 text-red-800',
-    green: 'bg-green-100 text-green-800',
-    blue: 'bg-blue-100 text-blue-800',
-    yellow: 'bg-yellow-100 text-yellow-800',
-    purple: 'bg-purple-100 text-purple-800',
-    orange: 'bg-orange-100 text-orange-800',
-    pink: 'bg-pink-100 text-pink-800',
-    gray: 'bg-gray-100 text-gray-800',
-    "#gray": "bg-gray-100 text-gray-800",
-    cyan: 'bg-cyan-100 text-cyan-800',
-    teal: 'bg-teal-100 text-teal-800',
-    brown: 'bg-brown-100 text-brown-800',
-}
-
-
 export default function Tags() {
 
     const queryClient = useQueryClient();
@@ -56,6 +40,8 @@ export default function Tags() {
         queryKey: ['tags'],
         queryFn: getTags,
     });
+
+    console.log('Tags data:', tagsData);
 
     const Tags = tagsData?.tags || [];
 
@@ -158,7 +144,11 @@ export default function Tags() {
                         <Card key={i}>
                             <CardContent className="flex flex-col gap-2 p-4">
                                 <div className="flex items-center justify-between">
-                                    <Badge className={`${Colors[tag.color]} text-sm px-2 py-1 rounded-full font-medium`}>
+                                    <Badge
+                                        className={`text-sm px-2 py-1 rounded-full font-medium ` }
+                                        style={{ backgroundColor: tag.color || "gray" }}
+                                        title={tag.name}
+                                    >
                                         {tag.name}
                                     </Badge>
                                     <div className="flex gap-2">
