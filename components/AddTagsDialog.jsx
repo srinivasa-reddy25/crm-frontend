@@ -12,40 +12,31 @@ import {
 } from '@/components/ui/dialog'
 
 import { Button } from '@/components/ui/button'
-
 import { Input } from '@/components/ui/input'
-import {
-    Popover,
-    PopoverTrigger,
-    PopoverContent
-} from '@/components/ui/popover'
-import { Tag, Plus, X, Palette } from 'lucide-react'
+import { Tag, Plus, X } from 'lucide-react'
 import Cookies from 'js-cookie'
 
-const colorOptions = [
-    { name: 'Red', bg: 'bg-red-100', text: 'text-red-800', value: 'red' },
-    { name: 'Blue', bg: 'bg-blue-100', text: 'text-blue-800', value: 'blue' },
-    { name: 'Green', bg: 'bg-green-100', text: 'text-green-800', value: 'green' },
-    { name: 'Yellow', bg: 'bg-yellow-100', text: 'text-yellow-800', value: 'yellow' },
-    { name: 'Purple', bg: 'bg-purple-100', text: 'text-purple-800', value: 'purple' },
-    { name: 'Pink', bg: 'bg-pink-100', text: 'text-pink-800', value: 'pink' },
-    { name: 'Indigo', bg: 'bg-indigo-100', text: 'text-indigo-800', value: 'indigo' },
-    { name: 'Gray', bg: 'bg-gray-100', text: 'text-gray-800', value: 'gray' },
-]
+// Utility to compute readable text color (black or white) for any background
+function getReadableTextColor(hex) {
+    if (!hex || hex[0] !== '#') return '#000000'
+    const r = parseInt(hex.substr(1, 2), 16)
+    const g = parseInt(hex.substr(3, 2), 16)
+    const b = parseInt(hex.substr(5, 2), 16)
+    const brightness = 0.299 * r + 0.587 * g + 0.114 * b
+    return brightness > 150 ? '#000000' : '#FFFFFF'
+}
 
 export function AddTagsDialog({ contactId, onTagsAdded }) {
     const token = Cookies.get('auth')
     const [tagInput, setTagInput] = useState('')
-    const [selectedColor, setSelectedColor] = useState(colorOptions[0])
+    const [selectedColor, setSelectedColor] = useState('#808080')
     const [tags, setTags] = useState([])
     const [isOpen, setIsOpen] = useState(false)
 
     const handleAddTag = () => {
-        if (tagInput.trim() && !tags.some(tag => tag.name === tagInput.trim())) {
-            setTags([...tags, {
-                name: tagInput.trim(),
-                color: selectedColor.value
-            }])
+        const name = tagInput.trim()
+        if (name && !tags.some(tag => tag.name === name)) {
+            setTags([...tags, { name, color: selectedColor }])
             setTagInput('')
         }
     }
@@ -78,9 +69,7 @@ export function AddTagsDialog({ contactId, onTagsAdded }) {
             })
 
             const data = await response.json()
-            if (!response.ok) {
-                throw new Error(data.message || 'Failed to add tags')
-            }
+            if (!response.ok) throw new Error(data.message || 'Failed to add tags')
 
             alert('Tags added successfully!')
             if (onTagsAdded) onTagsAdded(tags)
@@ -91,15 +80,6 @@ export function AddTagsDialog({ contactId, onTagsAdded }) {
             alert('Failed to add tags. Please try again.')
         }
     }
-
-    const getTagClasses = (colorValue) => {
-        const colorOption = colorOptions.find(option => option.value === colorValue) || colorOptions[0]
-        return `${colorOption.bg} ${colorOption.text}`
-    }
-
-
-
-
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -118,7 +98,7 @@ export function AddTagsDialog({ contactId, onTagsAdded }) {
                 </DialogHeader>
 
                 <div className="space-y-4 mt-4">
-                    <div className="flex space-x-2">
+                    <div className="flex items-center gap-2">
                         <Input
                             placeholder="Enter a tag"
                             value={tagInput}
@@ -126,29 +106,14 @@ export function AddTagsDialog({ contactId, onTagsAdded }) {
                             onKeyDown={handleKeyDown}
                             className="flex-1"
                         />
-
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="outline" size="icon" className="flex-shrink-0 cursor-pointer">
-                                    <Palette className="h-4 w-4" style={{ color: selectedColor.value }} />
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-64 ">
-                                <div className="grid grid-cols-4 gap-2 ">
-                                    {colorOptions.map((color) => (
-                                        <button
-                                            key={color.value}
-                                            className={`${color.bg} ${color.text} p-2 rounded-md hover:opacity-80 transition-opacity text-xs cursor-pointer`}
-                                            onClick={() => setSelectedColor(color)}
-                                        >
-                                            {color.name}
-                                        </button>
-                                    ))}
-                                </div>
-                            </PopoverContent>
-                        </Popover>
-
-                        <Button type="button" onClick={handleAddTag} size="icon" className="flex-shrink-0 cursor-pointer">
+                        <input
+                            type="color"
+                            value={selectedColor}
+                            onChange={(e) => setSelectedColor(e.target.value)}
+                            className="w-10 h-10 p-0 border rounded-md cursor-pointer"
+                            title="Choose color"
+                        />
+                        <Button type="button" onClick={handleAddTag} size="icon">
                             <Plus className="h-4 w-4" />
                         </Button>
                     </div>
@@ -158,7 +123,11 @@ export function AddTagsDialog({ contactId, onTagsAdded }) {
                             {tags.map((tag, index) => (
                                 <div
                                     key={index}
-                                    className={`px-2 py-1 rounded-md flex items-center gap-1 ${getTagClasses(tag.color)}`}
+                                    className="px-2 py-1 rounded-md flex items-center gap-1"
+                                    style={{
+                                        backgroundColor: tag.color,
+                                        color: getReadableTextColor(tag.color)
+                                    }}
                                 >
                                     <span>{tag.name}</span>
                                     <button
@@ -175,7 +144,7 @@ export function AddTagsDialog({ contactId, onTagsAdded }) {
                 </div>
 
                 <DialogFooter className="mt-4">
-                    <Button onClick={handleSubmit} disabled={tags.length === 0} className={"cursor:pointer"}>
+                    <Button onClick={handleSubmit} disabled={tags.length === 0}>
                         Save Tags
                     </Button>
                 </DialogFooter>
