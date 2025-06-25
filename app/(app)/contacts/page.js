@@ -89,7 +89,7 @@ function Contact() {
             const matchType = 'all';
             return getContacts({ ...baseParams, tags: selectedTags.join(','), matchType });
         },
-        enabled: !!availableTags.length,
+        enabled: !isTagsLoading,
     });
     const contacts = contactData?.contacts || [];
 
