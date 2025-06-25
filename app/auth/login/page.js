@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 
+import { toast } from "sonner";
+
 
 
 import { useContext } from "react";
@@ -40,9 +42,11 @@ function LoginPage() {
 
         try {
             await login(email, password);
-            console.log("Logged in successfully!");
+            toast.success("Logged in successfully!");
+            // console.log("Logged in successfully!");
         } catch (error) {
             console.log("Login error:", error.message);
+            toast.error("Invalid email or password. Please try again.");
             setError("Invalid email or password. Please try again.");
         }
     };

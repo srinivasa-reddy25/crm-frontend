@@ -18,9 +18,13 @@ import {
   Bot,
 } from "lucide-react"
 
+import Image from "next/image"
+import Link from "next/link"
 
 import AuthContext from "@/components/providers/AuthProvider"
 import { useContext } from "react"
+
+import logoimage from '@/public/image.png'
 
 
 import { NavMain } from "@/components/nav-main"
@@ -196,7 +200,7 @@ const data = {
 export function AppSidebar({ ...props }) {
 
   const { user } = useContext(AuthContext);
-  const {userData} = useUser();
+  const { userData } = useUser();
 
   console.log("DBuser:", userData);
   // console.log("AppSidebar user:", user);
@@ -256,7 +260,22 @@ export function AppSidebar({ ...props }) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+        <Link
+          href="/"
+          className="flex items-center gap-2 px-4 py-3 transition-all"
+        >
+          <Image
+            src={logoimage}
+            alt="Logo"
+            width={32}
+            height={32}
+            className="h-8 w-8 object-contain"
+          />
+          <span className="text-lg font-semibold tracking-tight transition-opacity group-[.sidebar-collapsed]:opacity-0 group-[.sidebar-collapsed]:w-0 overflow-hidden">
+            MyCRM
+          </span>
+        </Link>
+        {/* <TeamSwitcher teams={data.teams} /> */}
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={navData} />
