@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 const protectedRoutes = [
+  '/',
   '/dashboard',
   '/contacts',
   '/activities',
@@ -29,7 +30,8 @@ export function middleware(request) {
 
   const isLoggedIn = request.cookies.get('auth')?.value;
 
-  if (isProtected && !isLoggedIn) {
+
+  if (isProtected && !isLoggedIn && !isAuthRoute) {
     const loginUrl = new URL('/auth/login', request.url);
     return NextResponse.redirect(loginUrl);
   }
@@ -44,6 +46,7 @@ export function middleware(request) {
 
 export const config = {
   matcher: [
+    '/',
     '/dashboard/:path*',
     '/contacts/:path*',
     '/activities/:path*',
