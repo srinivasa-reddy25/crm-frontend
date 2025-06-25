@@ -13,7 +13,6 @@ import { Loader2, Bot, User } from "lucide-react";
 
 import { getUserConversations } from "@/services/conversationAPI";
 import { useQuery } from "@tanstack/react-query";
-
 import { ConversationList } from "@/components/ConversationList";
 
 
@@ -114,7 +113,7 @@ export default function Chat() {
 
                 socketInstance.on("ai-typing", setIsTyping);
                 socketInstance.on("chat-history", (history) => {
-                    console.log("Received chat history:", history);
+                    console.log("Receved chiat history:", history);
                     setMessages(history);
                 });
 

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Camera, Save } from "lucide-react"
 
-import CloudinaryUploader from "@/app/utilities/Cloudinary"
+import CloudinaryUploader from "@/lib/utilities/Cloudinary"
 import { CardContent } from "@/components/ui/card"
 
 import { useQuery, useMutation } from "@tanstack/react-query"
