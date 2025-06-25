@@ -147,7 +147,7 @@ export default function ProfileClient() {
     console.error("Error fetching user profile:", error)
     return <div>Error loading profile</div>
   }
-  
+
 
   return (
     <>

@@ -44,6 +44,8 @@ export function AddContactDialog() {
     const [isLoadingTags, setIsLoadingTags] = useState(false);
     const [tagError, setTagError] = useState(null);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
 
 
     // const availableTags = ['VIP', 'Lead', 'New', 'Follow-Up', 'Important'];
@@ -78,6 +80,7 @@ export function AddContactDialog() {
     };
 
     const onSubmit = async (data) => {
+        setIsSubmitting(true);
         try {
             console.log('Form Data:', data);
 
@@ -97,13 +100,14 @@ export function AddContactDialog() {
                 throw new Error('Failed to create contact');
             }
             const result = await response.json();
+            setIsSubmitting(false);
             console.log('Contact created successfully:', result);
             toast.success('Contact created successfully!');
 
             reset();
 
             setIsDialogOpen(false);
-            
+
             queryClient.invalidateQueries({ queryKey: ['contacts'] });
 
         } catch (error) {
@@ -200,29 +204,46 @@ export function AddContactDialog() {
                     <div className="grid gap-2">
                         <Label>Tags</Label>
                         <div className="flex flex-wrap gap-2">
-                            {availableTags.map((tag, index) => (
-                                <Button
-                                    key={index}
-                                    type="button"
-                                    variant={selectedTags.includes(tag._id) ? 'default' : 'outline'}
-                                    className={clsx('px-3 py-1 rounded-full text-sm',
-                                        { 'bg-opacity-50': selectedTags.includes(tag._id) }
-                                    )}
-                                    style={{
-                                        backgroundColor: selectedTags.includes(tag._id) ? tag.color : 'transparent',
-                                        borderColor: tag.color,
-                                        color: selectedTags.includes(tag._id) ? '#fff' : undefined
-                                    }}
-                                    onClick={() => toggleTag(tag._id)}
-                                >
-                                    {tag.name}
-                                </Button>
-                            ))}
+                            <>
+                                {
+                                    isLoadingTags ? (
+                                        <span className="text-sm text-gray-500">Loading tags...</span>
+                                    ) : tagError ? (
+                                        <span className="text-sm text-red-500">{tagError}</span>
+                                    ) : (
+                                        <>
+                                            {availableTags.map((tag, index) => (
+                                                <Button
+                                                    key={index}
+                                                    type="button"
+                                                    variant={selectedTags.includes(tag._id) ? 'default' : 'outline'}
+                                                    className={clsx('px-3 py-1 rounded-full text-sm',
+                                                        { 'bg-opacity-50': selectedTags.includes(tag._id) }
+                                                    )}
+                                                    style={{
+                                                        backgroundColor: selectedTags.includes(tag._id) ? tag.color : 'transparent',
+                                                        borderColor: tag.color,
+                                                        color: selectedTags.includes(tag._id) ? '#fff' : undefined
+                                                    }}
+                                                    onClick={() => toggleTag(tag._id)}
+                                                >
+                                                    {tag.name}
+                                                </Button>
+                                            ))}
+                                        </>
+                                    )
+                                }
+
+                            </>
                         </div>
                     </div>
 
                     <DialogFooter>
-                        <Button type="submit">Save</Button>
+
+                        <Button type="submit" disabled={isSubmitting} className="w-full">{
+                            isSubmitting ? "Saving..." :
+                                "Save"
+                        }</Button>
                     </DialogFooter>
                 </form>
             </DialogContent>
