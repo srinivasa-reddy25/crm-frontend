@@ -24,13 +24,13 @@ import Link from "next/link"
 import AuthContext from "@/components/providers/AuthProvider"
 import { useContext } from "react"
 
-import logoimage from '@/public/image.png'
+import logoimage from '@/public/images/image.png'
 
 
 import { NavMain } from "@/components/nav-main"
-import { NavProjects } from "@/components/nav-projects"
+// import { NavProjects } from "@/components/nav-projects"
 import { NavUser } from "@/components/nav-user"
-import { TeamSwitcher } from "@/components/team-switcher"
+// import { TeamSwitcher } from "@/components/team-switcher"
 import {
   Sidebar,
   SidebarContent,
