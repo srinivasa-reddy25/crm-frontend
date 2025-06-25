@@ -119,10 +119,10 @@ export function AuthProvider({ children }) {
             // Navigate based on whether this is a new user or not
             if (data.isNewUser) {
                 // Maybe show onboarding or welcome screen
-                router.push('/');
+                router.push('/dashboard');
             } else {
                 // Regular login flow
-                router.push('/');
+                router.push('/dashboard');
             }
 
             return result;
@@ -163,7 +163,7 @@ export function AuthProvider({ children }) {
             const token = await userCredential.user.getIdToken();
             storeAuthCookie(token);
             await syncWithBackend(userCredential.user, "login");
-            router.push('/');
+            router.push('/dashboard');
         } catch (error) {
             console.log("Login error:", error);
             throw error; // rethrow the actual Firebase error
@@ -186,7 +186,7 @@ export function AuthProvider({ children }) {
 
         await syncWithBackend(userCredential.user, "register");
 
-        router.push('/');
+        router.push('/dashboard');
     };
 
 

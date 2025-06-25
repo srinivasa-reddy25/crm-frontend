@@ -1,14 +1,5 @@
 "use client"
 
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbList,
-  BreadcrumbPage,
-} from "@/components/ui/breadcrumb"
-import { Separator } from "@/components/ui/separator"
-import { SidebarTrigger } from "@/components/ui/sidebar"
-import { ModeToggle } from "@/components/mode-toggle"
 
 import { Card, CardContent } from "@/components/ui/card"
 import {
@@ -28,9 +19,11 @@ import { getDashboardSummary } from "@/services/dashboardApi"
 import { getContactByCompany } from "@/services/dashboardApi"
 import { getActivitiesTimeline } from "@/services/dashboardApi"
 import { getTagDistribution } from "@/services/dashboardApi"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 
 
-
+import { useState } from "react"
 
 // const metrics = [
 //   {
@@ -105,6 +98,10 @@ const colors = ["#4f46e5", "#10b981", "#f59e0b", "#ef4444"]
 
 export default function DashboardPage() {
 
+
+  const [searchTerm, setSearchTerm] = useState("");
+
+
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["dashboard-summary"],
     queryFn: () => getDashboardSummary(),
@@ -140,6 +137,12 @@ export default function DashboardPage() {
   console.log("Tag distribution data:", tagDistribution);
 
 
+  const handleSearchInput = (e) => {
+    const searchTerm = e.target.value;
+
+    console.log("Search term:", searchTerm);
+    setSearchTerm(searchTerm);
+  };
 
 
   // console.log("Activities timeline data:", activitiesTimeline);
@@ -216,21 +219,7 @@ export default function DashboardPage() {
 
   return (
     <>
-      <header className="flex h-16 shrink-0 items-center gap-2">
-        <div className="flex items-center gap-2 px-4">
-          <SidebarTrigger className="-ml-1" />
-          <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbPage>Dashboard</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-          <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
-          <ModeToggle />
-        </div>
-      </header>
+
       <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
         <div className="space-y-2">
           <div>

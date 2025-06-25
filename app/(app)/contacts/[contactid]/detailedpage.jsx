@@ -12,19 +12,12 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Separator } from "@/components/ui/separator"
 import { Skeleton } from '@/components/ui/skeleton';
-import { SidebarTrigger } from '@/components/ui/sidebar';
-import { ModeToggle } from '@/components/mode-toggle';
+
 
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import {
-  Breadcrumb,
-  BreadcrumbList,
-  BreadcrumbItem,
-  BreadcrumbPage,
-} from '@/components/ui/breadcrumb';
+
 import { Mail, Phone, Building, ArrowLeft, Edit, Trash2, Tag, X, Save, Check, ChevronsUpDown } from 'lucide-react';
 
 import { getContactById } from "@/services/contactsApi";
@@ -205,19 +198,6 @@ export function ContactDetails() {
   return (
 
     <>
-      <header className="flex h-16 shrink-0 items-center gap-2">
-        <SidebarTrigger />
-        <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
-        <ModeToggle />
-        <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbPage>Detailed page</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-      </header>
       <div className="flex flex-1 flex-col gap-4 p-4 pt-0 bg-light dark:bg-dark">
 
         <div className="flex justify-between items-center px-4 py-2">
