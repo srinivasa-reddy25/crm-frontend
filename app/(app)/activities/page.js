@@ -64,10 +64,6 @@ function Activities() {
         getNextPageParam: (lastPage) => lastPage.nextCursor || undefined,
     });
 
-
-
-
-
     // console.log("Next cursor:", data?.pages[data.pages.length - 1]?.nextCursor);
 
     // console.log("Activities data:", data);

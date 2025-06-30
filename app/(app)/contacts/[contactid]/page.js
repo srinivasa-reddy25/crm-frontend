@@ -85,7 +85,7 @@ export default function ContactDetails() {
     mutationFn: ({ id, data }) => updateContact(id, data),
     onSuccess: (res) => {
       toast.success('Contact updated!');
-      queryClient.invalidateQueries(['contacts']); // Optional: refetch contact list
+      queryClient.invalidateQueries(['contacts']);
       setIsEditMode(false);
     },
     onError: (error) => {

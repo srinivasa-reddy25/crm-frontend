@@ -7,10 +7,10 @@ import { PlusIcon } from "lucide-react";
 
 export function ConversationList({ conversations = [], isLoading, onSelect, selectedId }) {
     return (
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-150 w-80 overflow-y-auto">
             <Button
                 variant="outline"
-                className="w-full mb-4 flex items-center gap-2"
+                className="w-full mb-4 flex items-center gap-2 relative top-0 left-0 z-10"
                 onClick={() => onSelect(null)}
             >
                 <PlusIcon className="w-4 h-4" />

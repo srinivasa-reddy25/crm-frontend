@@ -3,11 +3,11 @@ import Cookies from 'js-cookie';
 
 const axiosInstance = axios.create({
     baseURL: process.env.NEXT_PUBLIC_API_URL+"/api" || 'http://localhost:3001/api',
-    timeout: 10000, // 10 seconds
+    timeout: 10000, 
 });
 
 axiosInstance.interceptors.request.use(async (config) => {
-    const token = Cookies.get('auth');// You can change this to context or cookie if needed
+    const token = Cookies.get('auth');
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }

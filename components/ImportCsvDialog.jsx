@@ -11,6 +11,8 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 
+import { toast } from 'sonner'
+
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
@@ -23,6 +25,7 @@ export function ImportCsvDialog() {
   // console.log('Token:', token)
   const [file, setFile] = useState(null)
   const [isDragging, setIsDragging] = useState(false)
+  const [isuploading, setIsUploading] = useState(false)
 
   const handleDragOver = (e) => {
     e.preventDefault()
@@ -40,7 +43,8 @@ export function ImportCsvDialog() {
     if (droppedFile?.type === 'text/csv') {
       setFile(droppedFile)
     } else {
-      alert('Please upload a valid CSV file.')
+      // alert('Please upload a valid CSV file.')
+      toast.error('Please upload a valid CSV file.')
     }
   }
 
@@ -49,7 +53,8 @@ export function ImportCsvDialog() {
     if (selectedFile?.type === 'text/csv') {
       setFile(selectedFile)
     } else {
-      alert('Please select a valid CSV file.')
+      toast.error('Please select a valid CSV file.')
+      // alert('Please select a valid CSV file.')
     }
   }
 
@@ -58,6 +63,7 @@ export function ImportCsvDialog() {
 
 
     if (file) {
+      setIsUploading(true)
       const formData = new FormData();
       formData.append('file', file);
       try {
@@ -73,11 +79,20 @@ export function ImportCsvDialog() {
         if (!response.ok) {
           throw new Error(data.message || 'Failed to upload file');
         }
+
+
+
+        setIsUploading(false)
+
+        if (data.failureCount > 0) {
+          toast.error(`Failed to import ${data.failureCount} contacts. Please check the file for errors.`)
+        } else {
+          toast.success('All contacts imported successfully!');
+        }
+
         console.log("responseData  : ", data)
-
         console.log('File ready for upload:', file)
-        alert('File uploaded successfully!');
-
+        toast.success('File uploaded successfully!')
       } catch (error) {
         console.error('Error uploading file:', error)
       }
@@ -133,8 +148,20 @@ export function ImportCsvDialog() {
           <Input id="csvFile" type="file" accept=".csv" onChange={handleFileSelect} />
         </div>
 
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <h4 className="text-sm font-medium text-gray-900 mb-2">
+            CSV Upload Guidelines:
+          </h4>
+          <ul className="text-xs text-gray-600 space-y-1">
+            <li>• The first row must include headers: name, email, phone, company, tags</li>
+            <li>• Use commas to separate multiple tags</li>
+            <li>• File size limit: 10MB</li>
+            <li>• Only .csv files are accepted</li>
+          </ul>
+        </div>
+
         <DialogFooter className="mt-4">
-          <Button disabled={!file} onClick={handleUpload} >Upload</Button>
+          <Button disabled={!file || isuploading} onClick={handleUpload}>{!isuploading ? "Upload" : 'Uploading...'}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

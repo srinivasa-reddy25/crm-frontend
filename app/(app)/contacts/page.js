@@ -21,6 +21,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation"
 
 
+
 import { ImportCsvDialog } from "@/components/ImportCsvDialog"
 
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
@@ -42,6 +43,7 @@ function Contact() {
     const [selectedTags, setSelectedTags] = useState([]);
     const queryClient = useQueryClient();
     const [searchQuery, setSearchQuery] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
 
 
 
@@ -70,13 +72,13 @@ function Contact() {
         isError: isContactsError,
         error: contactsError,
     } = useQuery({
-        queryKey: ['contacts', { selectedTags, searchQuery, currentPage, itemsPerPage }],
+        queryKey: ['contacts', { selectedTags, debouncedSearch, currentPage, itemsPerPage }],
         queryFn: () => {
             const baseParams = {
-                search: searchQuery,
+                search: debouncedSearch,
                 page: currentPage,
                 limit: itemsPerPage,
-            };
+            }
 
             if (selectedTags.length === 0 || selectedTags.length === availableTags.length) {
                 return getContacts(baseParams);
@@ -106,7 +108,7 @@ function Contact() {
             tagColors: ["destructive", "secondary"],
             lastInteraction: "2 days ago",
         },
-    ];
+    ]
     const displayContacts = isContactsError ? fallbackContacts : contacts;
     console.log("Contacts:", displayContacts);
 
@@ -119,25 +121,29 @@ function Contact() {
     const { mutate: deleteContactMutate, isPending: isDeleting } = useMutation({
         mutationFn: deleteContact,
         onSuccess: (_, contactId) => {
-            alert('Contact deleted successfully!');
+            toast.success('Contact deleted successfully!');
+            // alert('Contact deleted successfully!');
             queryClient.invalidateQueries(['contacts']);
         },
         onError: (error) => {
             console.error('Failed to delete contact:', error);
-            alert('Failed to delete contact. Please try again later.');
+            toast.error('Failed to delete contact. Please try again later.');
+            // alert('Failed to delete contact. Please try again later.');
         },
     });
 
     const { mutate: bulkDeleteMutate, isPending: isBulkDeleting } = useMutation({
         mutationFn: bulkDeleteContacts,
         onSuccess: () => {
-            alert('Contacts deleted successfully!');
+            toast.success('Contacts deleted successfully!');
+            // alert('Contacts deleted successfully!');
             queryClient.invalidateQueries(['contacts']);
             setSelectedContactIds([]);
         },
         onError: (error) => {
             console.error('Failed to delete contacts:', error);
-            alert('Failed to delete contacts. Please try again later.');
+            toast.error('Failed to delete contacts. Please try again later.');
+            // alert('Failed to delete contacts. Please try again later.');
         }
     });
 
@@ -239,6 +245,16 @@ function Contact() {
         }
     }, [contactData]);
 
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedSearch(searchQuery);
+        }, 400);
+
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [searchQuery]);
+
 
     // if (isContactsLoading) {
     //     return 
@@ -262,7 +278,7 @@ function Contact() {
                     <div className="flex items-center justify-between gap-2">
                         <div className="flex flex-1 items-center gap-2">
                             <Input type="text" placeholder="Search contacts..." value={searchQuery} className="w-[300px]" onChange={e => setSearchQuery(e.target.value)} />
-                            <DropdownMenu>
+                            <DropdownMenu >
                                 <DropdownMenuTrigger asChild>
                                     <Button variant="outline" className="gap-2">
                                         <Filter className="h-4 w-4" />
