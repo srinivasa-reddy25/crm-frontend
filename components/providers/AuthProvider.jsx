@@ -10,10 +10,9 @@ import {
     onAuthStateChanged,
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword,
+    signInWithPopup,
     signOut,
     updateProfile,
-    signInWithRedirect,
-    getRedirectResult
 } from 'firebase/auth';
 const storeAuthCookie = (token) => {
     document.cookie = `auth=${token}; path=/; max-age=3600; SameSite=Strict; Secure`;
@@ -82,68 +81,54 @@ export function AuthProvider({ children }) {
         }
     };
 
-    const handleGoogleAuthSuccess = async (result) => {
-        console.log("Google sign-in successful:", result.user.email);
-
-        const userData = {
-            name: result.user.displayName,
-            profilePicture: result.user.photoURL,
-            preference: "light",
-        };
-
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/google`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${await result.user.getIdToken()}`,
-            },
-            body: JSON.stringify(userData),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            console.error("Google auth backend error:", data);
-            throw new Error(data.error || 'Failed to authenticate with Google');
-        }
-
-        const token = await result.user.getIdToken();
-        storeAuthCookie(token); // Store token in cookie
-
-        console.log("Google auth backend response:", data);
-
-        // Navigate based on whether this is a new user or not
-        if (data.isNewUser) {
-            // Maybe show onboarding or welcome screen
-            router.push('/dashboard');
-        } else {
-            // Regular login flow
-            router.push('/dashboard');
-        }
-
-        return result;
-    };
-
     const loginWithGoogle = async () => {
-        console.log('Starting Google sign-in process');
-        // signInWithPopup is unreliable across browsers (popup blockers, Safari,
-        // in-app webviews all kill it silently) - use a full-page redirect instead.
-        // The result is picked up in the getRedirectResult effect below.
-        await signInWithRedirect(auth, provider);
-    };
+        try {
+            console.log('Starting Google sign-in process');
+            const result = await signInWithPopup(auth, provider);
+            console.log("Google sign-in successful:", result.user.email);
 
+            const userData = {
+                name: result.user.displayName,
+                profilePicture: result.user.photoURL,
+                preference: "light",
+            };
 
-    useEffect(() => {
-        getRedirectResult(auth)
-            .then((result) => {
-                if (result) {
-                    return handleGoogleAuthSuccess(result);
-                }
-            })
-            .catch((error) => {
-                console.error('Google login error:', error);
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/google`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${await result.user.getIdToken()}`,
+                },
+                body: JSON.stringify(userData),
             });
-    }, []);
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                console.error("Google auth backend error:", data);
+                throw new Error(data.error || 'Failed to authenticate with Google');
+            }
+
+            const token = await result.user.getIdToken();
+            storeAuthCookie(token); // Store token in cookie
+
+            console.log("Google auth backend response:", data);
+
+            // Navigate based on whether this is a new user or not
+            if (data.isNewUser) {
+                // Maybe show onboarding or welcome screen
+                router.push('/dashboard');
+            } else {
+                // Regular login flow
+                router.push('/dashboard');
+            }
+
+            return result;
+        } catch (error) {
+            console.error('Google login error:', error);
+            throw error;
+        }
+    };
 
 
     useEffect(() => {
