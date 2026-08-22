@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useEffect, useState } from 'react';
+import { createContext, useEffect, useRef, useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 
@@ -10,7 +10,8 @@ import {
     onAuthStateChanged,
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword,
-    signInWithPopup,
+    signInWithRedirect,
+    getRedirectResult,
     signOut,
     updateProfile,
 } from 'firebase/auth';
@@ -45,6 +46,7 @@ export function AuthProvider({ children }) {
     const router = useRouter();
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const googleSyncInFlight = useRef(false);
 
 
     const syncWithBackend = async (firebaseUser, endpoint) => {
@@ -81,54 +83,49 @@ export function AuthProvider({ children }) {
         }
     };
 
-    const loginWithGoogle = async () => {
+    const completeGoogleLogin = async (firebaseUser) => {
+        if (googleSyncInFlight.current) return;
+
+        googleSyncInFlight.current = true;
         try {
-            console.log('Starting Google sign-in process');
-            const result = await signInWithPopup(auth, provider);
-            console.log("Google sign-in successful:", result.user.email);
-
-            const userData = {
-                name: result.user.displayName,
-                profilePicture: result.user.photoURL,
-                preference: "light",
-            };
-
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/google`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${await result.user.getIdToken()}`,
-                },
-                body: JSON.stringify(userData),
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                console.error("Google auth backend error:", data);
-                throw new Error(data.error || 'Failed to authenticate with Google');
-            }
-
-            const token = await result.user.getIdToken();
-            storeAuthCookie(token); // Store token in cookie
-
-            console.log("Google auth backend response:", data);
-
-            // Navigate based on whether this is a new user or not
-            if (data.isNewUser) {
-                // Maybe show onboarding or welcome screen
-                router.push('/dashboard');
-            } else {
-                // Regular login flow
-                router.push('/dashboard');
-            }
-
-            return result;
+            await syncWithBackend(firebaseUser, 'google');
+            const token = await firebaseUser.getIdToken();
+            storeAuthCookie(token);
+            sessionStorage.removeItem('googleRedirectPending');
+            router.replace('/dashboard');
         } catch (error) {
             console.error('Google login error:', error);
             throw error;
+        } finally {
+            googleSyncInFlight.current = false;
         }
     };
+
+    const loginWithGoogle = async () => {
+        console.log('Starting Google sign-in process');
+        sessionStorage.setItem('googleRedirectPending', 'true');
+        await signInWithRedirect(auth, provider);
+    };
+
+
+    useEffect(() => {
+        let cancelled = false;
+
+        getRedirectResult(auth)
+            .then(async (result) => {
+                if (!cancelled && result?.user) {
+                    await completeGoogleLogin(result.user);
+                }
+            })
+            .catch((error) => {
+                sessionStorage.removeItem('googleRedirectPending');
+                console.error('Google redirect error:', error);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
 
     useEffect(() => {
@@ -140,6 +137,13 @@ export function AuthProvider({ children }) {
                 try {
                     const token = await firebaseUser.getIdToken();
                     storeAuthCookie(token);
+
+                    // Some browsers restore the Firebase user after a redirect but
+                    // return null from getRedirectResult. The pending marker lets us
+                    // still finish the backend sync and dashboard navigation.
+                    if (sessionStorage.getItem('googleRedirectPending') === 'true') {
+                        await completeGoogleLogin(firebaseUser);
+                    }
                 } catch (error) {
                     console.error("Error getting token:", error);
                 }
