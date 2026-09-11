@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { connectSocket } from "@/lib/socket";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import { Loader2, Bot, User } from "lucide-react";
 
 
@@ -21,6 +21,9 @@ export default function Chat() {
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState("");
     const [isTyping, setIsTyping] = useState(false);
+    const [connected, setConnected] = useState(false);
+    const [replyError, setReplyError] = useState('');
+    const skipHistoryRef = useRef(null);
     const scrollAreaRef = useRef(null);
     const viewportRef = useRef(null);
     const socketRef = useRef(null);
@@ -45,128 +48,101 @@ export default function Chat() {
 
 
     useEffect(() => {
-
-        if (
-            !selectedConversation ||
-            !socketRef.current ||
-            !socketRef.current.connected
-        ) {
-            return;
-        }
-
         selectedConversationRef.current = selectedConversation;
-
-        console.log("Selected conversation changed:", selectedConversation);
-
-
-        if (selectedConversation?._id === "new") {
-            console.log("New conversation selected, clearing messages.");
-            setMessages([]);
+        setReplyError('');
+        if (skipHistoryRef.current === selectedConversation._id) {
+            skipHistoryRef.current = null;
             return;
         }
-
         setMessages([]);
-
-        // console.log("Requesting chat history for conversation ID:", selectedConversation._id);
-
-        socketRef.current.emit("get-chat-history", {
-            conversationId: selectedConversation._id
-        });
+        setIsTyping(false);
+        if (selectedConversation._id !== 'new' && socketRef.current?.connected) {
+            socketRef.current.emit('get-chat-history', { conversationId: selectedConversation._id });
+        }
     }, [selectedConversation]);
 
-
-
     useEffect(() => {
+        let cancelled = false;
+        let activeSocket;
         const setup = async () => {
             try {
-                const socketInstance = await connectSocket((socket) => {
-                    socketRef.current = socket;
+                const socket = await connectSocket();
+                if (cancelled) { socket?.disconnect(); return; }
+                if (!socket) { setReplyError('Sign in to use AI chat.'); return; }
+                activeSocket = socket;
+                socket.on('connect', () => {
+                    setConnected(true);
+                    const id = selectedConversationRef.current._id;
+                    if (id !== 'new') socket.emit('get-chat-history', { conversationId: id });
                 });
-
-                console.log("Socket instance:", socketInstance);
-
-                if (!socketInstance) return;
-
-                socketInstance.on("new-message", async (payload) => {
-                    const currentConversation = selectedConversationRef.current
-
-                    console.log("Received new message:", payload);
-                    console.log("Current conversation ID:", currentConversation?._id);
-                    console.log("Payload conversation ID:", payload.conversationId);
-
-                    if (!currentConversation?._id) {
-                        toast.error("No active conversation selected");
-                        return;
-                    }
-
-                    if (
-                        currentConversation._id === 'new' &&
-                        payload.conversationId &&
-                        currentConversation._id !== payload.conversationId
-                    ) {
-                        await refetch();
-                        setSelectedConversation({ _id: payload.conversationId });
-                    }
-                    setMessages((prev) => [...prev, payload]);
+                socket.on('disconnect', () => {
+                    setConnected(false);
+                    setIsTyping(false);
+                    setReplyError('Chat disconnected. Reconnecting…');
                 });
-
-
-                socketInstance.on("ai-typing", setIsTyping);
-                socketInstance.on("chat-history", (history) => {
-                    console.log("Receved chiat history:", history);
-                    setMessages(history);
+                socket.on('new-message', payload => {
+                    const current = selectedConversationRef.current._id;
+                    if (String(payload.conversationId) !== current) return;
+                    setMessages(previous => previous.some(item => item._id && item._id === payload._id) ? previous : [...previous, payload]);
+                    setReplyError('');
+                    setIsTyping(false);
+                    refetch();
                 });
-
-                socketInstance.on("error-message", (msg) =>
-                    toast({
-                        title: "Error",
-                        description: msg,
-                        variant: "destructive",
-                    })
-                );
-            } catch (error) {
-                console.error("❌ Error during socket setup:", error.message);
+                socket.on('ai-typing', setIsTyping);
+                socket.on('chat-history', history => {
+                    const current = selectedConversationRef.current._id;
+                    if (current !== 'new' && (!history.length || String(history[0].conversationId) === current)) setMessages(history);
+                });
+                socket.on('chat-history-error', message => { setReplyError(message); setIsTyping(false); });
+                socket.on('error-message', payload => {
+                    const message = typeof payload === 'string' ? payload : payload.message;
+                    setReplyError(message || 'Unable to complete your message. Please retry.');
+                    setIsTyping(false);
+                });
+                socketRef.current = socket;
+                setConnected(socket.connected);
+            } catch {
+                if (!cancelled) setReplyError('Unable to connect to chat. Refresh to reconnect.');
             }
         };
-
         setup();
+        return () => {
+            cancelled = true;
+            activeSocket?.removeAllListeners();
+            activeSocket?.disconnect();
+            if (socketRef.current === activeSocket) socketRef.current = null;
+        };
     }, []);
 
-
-
-
     useEffect(() => {
-        if (!viewportRef.current) return;
-        viewportRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
-    }, [messages, isTyping]);
+        const viewport = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+        if (viewport) viewport.scrollTop = viewport.scrollHeight;
+    }, [messages, isTyping, replyError]);
 
-    const handleSend = (e) => {
-        e.preventDefault();
-        if (!input.trim()) return;
-
-        const userMsg = {
-            sender: "user",
-            message: input,
-            timestamp: new Date().toISOString(),
-        };
-
-        // console.log("Sending message:", userMsg);
-
-        setMessages((prev) => [...prev, userMsg]);
-        setInput("");
-
-        console.log("Sending message via socket:", input);
-        console.log("Selected conversation ID:", selectedConversation?._id);
-
-        if (socketRef.current) {
-            socketRef.current.emit("send-message", { message: input, conversationId: selectedConversation._id });
-            console.log("conversationId:", selectedConversation._id);
-        } else {
-            toast({ title: "Not connected", description: "Socket not ready." });
-        }
+    const handleSend = event => {
+        event.preventDefault();
+        if (!input.trim() || isTyping) return;
+        if (!socketRef.current?.connected) { setReplyError('Chat is reconnecting. Please try again in a moment.'); return; }
+        const message = input.trim();
+        const conversationId = selectedConversationRef.current._id;
+        setReplyError('');
+        setIsTyping(true);
+        setMessages(previous => [...previous, { sender: 'user', message, timestamp: new Date().toISOString() }]);
+        setInput('');
+        socketRef.current.timeout(15000).emit('send-message', { message, conversationId }, (error, result) => {
+            if (error || !result?.ok) {
+                setIsTyping(false);
+                setReplyError(result?.error || 'The server did not confirm your message. Check the conversation before retrying.');
+                return;
+            }
+            if (conversationId === 'new' && selectedConversationRef.current._id === 'new') {
+                skipHistoryRef.current = result.conversationId;
+                selectedConversationRef.current = { _id: result.conversationId };
+                setSelectedConversation({ _id: result.conversationId });
+                refetch();
+            }
+        });
     };
-
-
 
     if (isLoading) {
         return (
@@ -179,7 +155,7 @@ export default function Chat() {
     if (error) {
         return (
             <div className="flex items-center justify-center h-screen">
-                <p className="text-red-500">Error loading conversations: {error.message}</p>
+                <p className="text-foreground">Error loading conversations: {error.message}</p>
             </div>
         )
     }
@@ -192,9 +168,9 @@ export default function Chat() {
         <>
         
 
-            <main className="flex-1 flex bg-muted px-2 sm:px-6 py-4 overflow-hidden">
-                <div className="border-r w-full sm:w-[350px] p-2">
-                    <h3 className="text-lg font-semibold mb-2">Conversations</h3>
+            <div className="assistant-workspace">
+                <div className="conversation-sidebar">
+                    <h3 className="text-xs font-medium text-muted-foreground mb-4">Conversations</h3>
                     <ConversationList
                         conversations={conversations}
                         isLoading={isLoading}
@@ -203,27 +179,36 @@ export default function Chat() {
                     />
                 </div>
 
-                <div className="flex-1 flex justify-center items-center px-4">
-                    <Card className="w-full max-w-2xl h-[85vh] flex flex-col shadow-xl rounded-2xl overflow-hidden">
-                        <ScrollArea className="flex-1 px-4 py-2 overflow-y-auto" ref={scrollAreaRef}>
+                <div className="conversation-main">
+                    <Card className="conversation-card">
+                        <ScrollArea className="min-h-0 flex-1 px-5 py-6 sm:px-8 overflow-y-auto" ref={scrollAreaRef}>
                             <div ref={viewportRef} className="space-y-4">
+                                {messages.length === 0 && <div className="chat-empty"><Bot className="size-7 stroke-1" /><p className="text-xl font-medium tracking-tight">Start a conversation</p><p className="text-sm text-muted-foreground">Ask about your contacts, activity, or follow-ups.</p></div>}
                                 {messages.map((msg, index) => (
                                     <ChatBubble key={index} msg={msg} />
                                 ))}
                                 {isTyping && <TypingIndicator />}
+                                {replyError && <div role="alert" className="rounded-lg border bg-muted p-4 text-sm leading-6">{replyError}</div>}
                             </div>
                         </ScrollArea>
 
-                        <form onSubmit={handleSend} className="p-4 border-t bg-background">
+                        <form onSubmit={handleSend} className="message-composer">
                             <div className="flex gap-2 items-end">
                                 <Textarea
                                     value={input}
                                     onChange={(e) => setInput(e.target.value)}
+                                    aria-label="Message"
+                                    onKeyDown={(event) => {
+                                        if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+                                            event.preventDefault();
+                                            event.currentTarget.form.requestSubmit();
+                                        }
+                                    }}
                                     placeholder="Type your message..."
                                     rows={2}
                                     className="flex-1 resize-none rounded-xl text-sm"
                                 />
-                                <Button type="submit" size="icon" className="rounded-full">
+                                <Button type="submit" size="icon" className="rounded-lg shrink-0" aria-label="Send message" disabled={!input.trim() || isTyping || !connected}>
                                     <svg
                                         xmlns="http://www.w3.org/2000/svg"
                                         width="20"
@@ -237,10 +222,11 @@ export default function Chat() {
                                     </svg>
                                 </Button>
                             </div>
+                            <p className="mt-1 text-[11px] text-muted-foreground">Enter to send · Shift + Enter for a new line</p>
                         </form>
                     </Card>
                 </div>
-            </main>
+            </div>
 
         </>
     );
@@ -249,8 +235,8 @@ export default function Chat() {
 function ChatBubble({ msg }) {
     const isUser = msg.sender === "user";
     const bubbleStyle = isUser
-        ? "bg-primary text-primary-foreground ml-auto"
-        : "bg-muted text-muted-foreground mr-auto";
+        ? "bg-muted text-foreground ml-auto"
+        : "text-foreground mr-auto";
 
     const Icon = isUser ? User : Bot;
 
@@ -258,7 +244,7 @@ function ChatBubble({ msg }) {
         <div className={`flex gap-2 items-start ${isUser ? "justify-end" : "justify-start"}`}>
             {!isUser && <Icon className="w-5 h-5 mt-1 text-muted-foreground" />}
             <div
-                className={`max-w-[75%] px-4 py-2 rounded-xl text-sm whitespace-pre-wrap ${bubbleStyle}`}
+                className={`max-w-[90%] sm:max-w-[80%] px-4 py-3 rounded-xl text-sm leading-7 whitespace-pre-wrap break-words ${bubbleStyle}`}
             >
                 {msg.message}
             </div>

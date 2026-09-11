@@ -1,4 +1,5 @@
 'use client';
+import { tagColor } from '@/lib/tag-colors';
 import { cn } from "@/lib/utils";
 
 import { useState, useEffect } from 'react';
@@ -192,15 +193,15 @@ export default function ContactDetails() {
   }
 
   if (error) {
-    return <div className="text-red-500">Error: {error.message}</div>;
+    return <div className="text-foreground">Error: {error.message}</div>;
   }
 
   return (
 
     <>
-      <div className="flex flex-1 flex-col gap-4 p-4 pt-0 bg-light dark:bg-dark">
+      <div className="flex flex-1 flex-col gap-3">
 
-        <div className="flex justify-between items-center px-4 py-2">
+        <div className="contact-detail-toolbar flex flex-wrap justify-between items-center gap-2 py-2">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => router.push('/contacts')}>
             <ArrowLeft className="h-4 w-4" />
             <span className="text-sm font-medium text-primary">Back to Contacts</span>
@@ -212,9 +213,9 @@ export default function ContactDetails() {
               {isEditMode ? 'Cancel' : 'Edit'}
             </Button>
 
-            {isEditMode ? <Button variant="success" onClick={handleSubmit}>
+            {isEditMode ? <Button variant="default" onClick={handleSubmit}>
               <Save className="h-4 w-4 mr-1" />
-              SAVE
+              Save changes
             </Button> : <Button variant="destructive" onClick={() => handleDeleteClick(contactId)}>
               <Trash2 className="h-4 w-4 mr-1" />
               Delete
@@ -234,13 +235,13 @@ export default function ContactDetails() {
                 {isEditMode ? (
                   <input
                     type="text"
-                    name="name"
+                    name="name" aria-label="Name"
                     value={formData.name}
                     onChange={handleInputChange}
-                    className="text-xl font-bold px-2 py-1 border rounded-md w-full"
+                    className="text-xl font-medium px-2 py-1 border rounded-md w-full"
                   />
                 ) : (
-                  <h2 className="text-xl font-bold">{contact.name}</h2>
+                  <h2 className="text-xl font-medium">{contact.name}</h2>
                 )}
                 <p className="text-sm text-muted-foreground">{contact.company ? contact.company.name : "--"}</p>
                 {/* {isEditMode ? (
@@ -264,7 +265,7 @@ export default function ContactDetails() {
             </div>
           </div>
 
-          <CardContent className="mt-6 space-y-4 grid grid-cols-1 grid-cols-2 gap-4">
+          <CardContent className="mt-6 space-y-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="flex items-center gap-2">
               <Mail className="inline mr-1 text-muted-foreground" />
               <div>
@@ -272,13 +273,13 @@ export default function ContactDetails() {
                 {isEditMode ? (
                   <input
                     type="email"
-                    name="email"
+                    name="email" aria-label="Email"
                     value={formData.email}
                     onChange={handleInputChange}
                     className="text-base px-2 py-1 border rounded-md w-full"
                   />
                 ) : (
-                  <p className="text-lg font-medium">{contact.email}</p>
+                  <p className="text-sm font-medium break-words">{contact.email}</p>
                 )}
 
               </div>
@@ -291,13 +292,13 @@ export default function ContactDetails() {
                 {isEditMode ? (
                   <input
                     type="text"
-                    name="phone"
+                    name="phone" aria-label="Phone"
                     value={formData.phone}
                     onChange={handleInputChange}
                     className="text-base px-2 py-1 border rounded-md w-full"
                   />
                 ) : (
-                  <p className="text-lg font-medium">{contact.phone}</p>
+                  <p className="text-sm font-medium break-words">{contact.phone}</p>
                 )}
 
               </div>
@@ -307,7 +308,7 @@ export default function ContactDetails() {
               <Building className="inline  mr-1 text-muted-foreground" />
               <div>
                 <p className="text-sm text-muted-foreground">Company</p>
-                <p className="text-lg font-medium">{contact.company?.name || "--"}</p>
+                <p className="text-sm font-medium break-words">{contact.company?.name || "--"}</p>
               </div>
             </div>
 
@@ -320,10 +321,7 @@ export default function ContactDetails() {
                     <Badge
                       key={i}
                       variant="outline"
-                      style={{
-                        borderColor: tag.color || '#888888',
-                        color: tag.color || '#888888'
-                      }}
+                      style={{ borderColor: `color-mix(in srgb, ${tagColor(tag.color)} 55%, var(--border))`, color: 'var(--foreground)', backgroundColor: `color-mix(in srgb, ${tagColor(tag.color)} 16%, var(--background))` }}
                     >
                       {tag.name}
                     </Badge>
@@ -377,7 +375,7 @@ export default function ContactDetails() {
                               <div className="flex items-center">
                                 <div
                                   className="w-3 h-3 rounded-full mr-2"
-                                  style={{ backgroundColor: tag.color || '#888888' }}
+                                  style={{ backgroundColor: tagColor(tag.color) }}
                                 />
                                 {tag.name}
                               </div>
@@ -401,16 +399,12 @@ export default function ContactDetails() {
                         <Badge
                           key={tag._id}
                           variant="outline"
-                          style={{
-                            borderColor: tag.color || '#888888',
-                            color: tag.color || '#888888',
-                            backgroundColor: `${tag.color}10` || '#f8f8f8',
-                          }}
+                          style={{ borderColor: `color-mix(in srgb, ${tagColor(tag.color)} 55%, var(--border))`, color: 'var(--foreground)', backgroundColor: `color-mix(in srgb, ${tagColor(tag.color)} 16%, var(--background))` }}
                         >
                           {tag.name}
                           <button
                             type="button"
-                            className="ml-1 rounded-full outline-none focus:ring-2"
+                            className="ml-1 rounded-full outline-none focus:ring-2" aria-label={`Remove ${tag.name}`}
                             onClick={() => {
                               setFormData(prevData => ({
                                 ...prevData,
@@ -431,11 +425,7 @@ export default function ContactDetails() {
                     <Badge
                       key={i}
                       variant="outline"
-                      style={{
-                        borderColor: tag.color || '#888888',
-                        color: tag.color || '#888888',
-                        backgroundColor: `${tag.color}10` || '#f8f8f8',
-                      }}
+                      style={{ borderColor: `color-mix(in srgb, ${tagColor(tag.color)} 55%, var(--border))`, color: 'var(--foreground)', backgroundColor: `color-mix(in srgb, ${tagColor(tag.color)} 16%, var(--background))` }}
                     >
                       {tag.name}
                     </Badge>
@@ -464,10 +454,7 @@ export default function ContactDetails() {
                     <Badge
                       key={i}
                       variant="outline"
-                      style={{
-                        borderColor: tag.color || '#888888',
-                        color: tag.color || '#888888',
-                      }}
+                      style={{ borderColor: `color-mix(in srgb, ${tagColor(tag.color)} 55%, var(--border))`, color: 'var(--foreground)', backgroundColor: `color-mix(in srgb, ${tagColor(tag.color)} 16%, var(--background))` }}
                     >
                       {tag.name}
                     </Badge>
@@ -485,7 +472,7 @@ export default function ContactDetails() {
               <p className="text-sm font-semibold mb-1">Notes</p>
               {isEditMode ? (
                 <textarea
-                  name="notes"
+                  name="notes" aria-label="Notes"
                   value={formData.notes}
                   onChange={handleInputChange}
                   rows={3}
@@ -512,15 +499,15 @@ export default function ContactDetails() {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex justify-between items-center">
-              <span className="text-sm font-medium text-blue-500">Email sent</span>
+              <span className="text-sm font-medium text-foreground">Email sent</span>
               <span className="text-sm text-muted-foreground">2 days ago</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-sm font-medium text-green-500">Meeting scheduled</span>
+              <span className="text-sm font-medium text-foreground">Meeting scheduled</span>
               <span className="text-sm text-muted-foreground">1 week ago</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-sm font-medium text-yellow-500">Contact created</span>
+              <span className="text-sm font-medium text-foreground">Contact created</span>
               <span className="text-sm text-muted-foreground">2 weeks ago</span>
             </div>
           </CardContent>

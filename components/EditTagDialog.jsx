@@ -1,4 +1,5 @@
 'use client'
+import { tagColor } from '@/lib/tag-colors';
 
 import { useState, useEffect } from 'react'
 import {
@@ -37,7 +38,7 @@ export function EditTagDialog({ tag, onTagUpdated }) {
     useEffect(() => {
         if (tag && isOpen) {
             setTagName(tag.name)
-            setSelectedColor(tag.color || '#808080')
+            setSelectedColor(tagColor(tag.color))
         }
     }, [tag, isOpen])
 
@@ -85,17 +86,17 @@ export function EditTagDialog({ tag, onTagUpdated }) {
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="cursor-pointer">
+                <Button variant="ghost" size="icon" className="cursor-pointer" aria-label={`Edit ${tag.name}`}>
                     <Pencil className="h-4 w-4" />
                 </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="bounded-dialog">
                 <DialogHeader>
                     <DialogTitle>Edit Tag</DialogTitle>
                     <DialogDescription>Modify the tag name and color.</DialogDescription>
                 </DialogHeader>
 
-                <div className="space-y-4 mt-4">
+                <div className="dialog-scroll-body space-y-4">
                     <div className="space-y-2">
                         <Label htmlFor="tagName">Tag Name</Label>
                         <Input
@@ -131,7 +132,7 @@ export function EditTagDialog({ tag, onTagUpdated }) {
                     </div>
                 </div>
 
-                <DialogFooter className="mt-4">
+                <DialogFooter>
                     <Button variant="outline" onClick={() => setIsOpen(false)}>
                         Cancel
                     </Button>

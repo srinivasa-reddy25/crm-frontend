@@ -101,7 +101,7 @@ export function AddTagsDialog({ contactId, onTagsAdded }) {
                     Add Tags
                 </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="bounded-dialog">
                 <DialogHeader>
                     <DialogTitle>Add Tags</DialogTitle>
                     <DialogDescription>
@@ -109,7 +109,7 @@ export function AddTagsDialog({ contactId, onTagsAdded }) {
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="space-y-4 mt-4">
+                <div className="dialog-scroll-body space-y-4">
                     <div className="flex items-center gap-2">
                         <Input
                             placeholder="Enter a tag"
@@ -125,7 +125,7 @@ export function AddTagsDialog({ contactId, onTagsAdded }) {
                             className="w-10 h-10 p-0 border rounded-md cursor-pointer"
                             title="Choose color"
                         />
-                        <Button type="button" onClick={handleAddTag} size="icon">
+                        <Button type="button" onClick={handleAddTag} size="icon" aria-label="Add tag to list">
                             <Plus className="h-4 w-4" />
                         </Button>
                     </div>
@@ -144,6 +144,7 @@ export function AddTagsDialog({ contactId, onTagsAdded }) {
                                     <span>{tag.name}</span>
                                     <button
                                         type="button"
+                                        aria-label={`Remove ${tag.name}`}
                                         onClick={() => handleRemoveTag(tag)}
                                         className="hover:opacity-70"
                                     >
@@ -155,7 +156,7 @@ export function AddTagsDialog({ contactId, onTagsAdded }) {
                     )}
                 </div>
 
-                <DialogFooter className="mt-4">
+                <DialogFooter>
                     <Button onClick={handleSubmit} disabled={tags.length === 0}>
                         Save Tags
                     </Button>

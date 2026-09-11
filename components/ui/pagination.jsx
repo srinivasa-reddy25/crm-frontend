@@ -14,6 +14,7 @@ export function Pagination({
         pages.push(
             <Button
                 key={1}
+                aria-label="Page 1" aria-current={currentPage === 1 ? "page" : undefined}
                 variant={currentPage === 1 ? "default" : "outline"}
                 size="icon"
                 onClick={() => onPageChange(1)}
@@ -36,6 +37,7 @@ export function Pagination({
             pages.push(
                 <Button
                     key={i}
+                    aria-label={`Page ${i}`} aria-current={currentPage === i ? "page" : undefined}
                     variant={currentPage === i ? "default" : "outline"}
                     size="icon"
                     onClick={() => onPageChange(i)}
@@ -55,6 +57,7 @@ export function Pagination({
             pages.push(
                 <Button
                     key={totalPages}
+                    aria-label={`Page ${totalPages}`} aria-current={currentPage === totalPages ? "page" : undefined}
                     variant={currentPage === totalPages ? "default" : "outline"}
                     size="icon"
                     onClick={() => onPageChange(totalPages)}
@@ -68,10 +71,11 @@ export function Pagination({
     };
 
     return (
-        <div className="flex items-center justify-center space-x-2 py-4">
+        <nav aria-label="Contact pages" className="flex flex-wrap items-center justify-center gap-1.5 py-2">
             <Button
                 variant="outline"
                 size="icon"
+                aria-label="Previous page"
                 onClick={() => onPageChange(currentPage - 1)}
                 disabled={currentPage === 1}
             >
@@ -83,11 +87,12 @@ export function Pagination({
             <Button
                 variant="outline"
                 size="icon"
+                aria-label="Next page"
                 onClick={() => onPageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
             >
                 <ChevronRight className="h-4 w-4" />
             </Button>
-        </div>
+        </nav>
     );
 }

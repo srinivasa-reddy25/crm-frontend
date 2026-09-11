@@ -33,6 +33,7 @@ const registerSchema = z.object({
 function Register() {
     const { register, loginWithGoogle, googleLoading, loading } = useContext(AuthContext);
 
+    const [submitting, setSubmitting] = useState(false);
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -67,6 +68,7 @@ function Register() {
             return;
         }
 
+        setSubmitting(true);
         try {
             await register(name, email, password);
             toast.success("Registration successful! Please check your email.");
@@ -81,19 +83,19 @@ function Register() {
             console.error("Registration failed:", err);
             toast.error("Registration failed. Please try again.");
             // alert("Registration failed. Please try again.");
-        }
+        } finally { setSubmitting(false); }
     };
 
     return (
-        <div className="flex items-center justify-center min-h-screen  p-4">
+        <div className="flex w-full items-center justify-center p-4">
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
-                className="bg-white p-8 rounded-lg shadow-md w-full max-w-md"
+                className="bg-card p-6 sm:p-8 rounded-2xl border border-border shadow-sm w-full max-w-md"
             >
                 <div className="text-center mb-6">
-                    <h1 className="text-3xl font-bold tracking-tight text-gray-900">Hey there!</h1>
+                    <h1 className="text-3xl font-medium tracking-tight text-foreground">Create your account</h1>
                     <p className="text-muted-foreground text-sm">
                         Please enter your email and password to register
                     </p>
@@ -104,22 +106,22 @@ function Register() {
                         <Input
                             id="name"
                             type="text"
-                            placeholder="Sai Teja"
+                            placeholder="Your name"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                         />
-                        {formErrors.name && <p className="text-sm text-red-500">{formErrors.name}</p>}
+                        {formErrors.name && <p className="text-sm text-foreground">{formErrors.name}</p>}
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="email">Email</Label>
                         <Input
                             id="email"
                             type="email"
-                            placeholder="prodgain@gmail.com"
+                            placeholder="you@example.com"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                         />
-                        {formErrors.email && <p className="text-sm text-red-500">{formErrors.email}</p>}
+                        {formErrors.email && <p className="text-sm text-foreground">{formErrors.email}</p>}
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="password">Password</Label>
@@ -135,12 +137,12 @@ function Register() {
                             <button
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
                             >
                                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                             </button>
                         </div>
-                        {formErrors.password && <p className="text-sm text-red-500">{formErrors.password}</p>}
+                        {formErrors.password && <p className="text-sm text-foreground">{formErrors.password}</p>}
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="confirm-password">Confirm Password</Label>
@@ -156,13 +158,13 @@ function Register() {
                             <button
                                 type="button"
                                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
                             >
                                 {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                             </button>
                         </div>
                         {formErrors.confirmPassword && (
-                            <p className="text-sm text-red-500">{formErrors.confirmPassword}</p>
+                            <p className="text-sm text-foreground">{formErrors.confirmPassword}</p>
                         )}
                     </div>
                     <div className="flex items-center space-x-2">
@@ -173,28 +175,29 @@ function Register() {
                         />
                         <Label htmlFor="terms">
                             I accept the{" "}
-                            <a href="#" className="text-black hover:underline">
+                            <a href="#" className="text-foreground hover:underline">
                                 Terms and Conditions
                             </a>
                         </Label>
                     </div>
                     {formErrors.termsAccepted && (
-                        <p className="text-sm text-red-500">{formErrors.termsAccepted}</p>
+                        <p className="text-sm text-foreground">{formErrors.termsAccepted}</p>
                     )}
                     <Button
                         type="submit"
-                        className="w-full cursor-pointer bg-black text-white hover:bg-gray-800 transition-colors duration-200"
+                        disabled={submitting || googleLoading}
+                        className="w-full cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-200"
                     >
-                        Register
+                        {submitting ? "Creating account…" : "Register"}
                     </Button>
                 </form>
 
                 <div className="relative my-6">
                     <div className="absolute inset-0 flex items-center">
-                        <span className="w-full border-t border-gray-300" />
+                        <span className="w-full border-t border-border" />
                     </div>
-                    <div className="relative flex justify-center text-sm text-gray-500 uppercase">
-                        <span className="bg-white px-2">Or continue with</span>
+                    <div className="relative flex justify-center text-sm text-muted-foreground">
+                        <span className="bg-card px-2">Or continue with</span>
                     </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4 mb-6">
@@ -202,14 +205,14 @@ function Register() {
                         <Mail size={18} />
                         <span>{googleLoading ? 'Signing in…' : 'Google'}</span>
                     </Button>
-                    <Button variant="outline" className="w-full cursor-not-allowed">
+                    <Button variant="outline" className="w-full" disabled title="GitHub sign-in is not available yet">
                         <Github size={18} />
                         <span>GitHub</span>
                     </Button>
                 </div>
-                <div className="text-center text-sm text-gray-500">
+                <div className="text-center text-sm text-muted-foreground">
                     Already have an account?{" "}
-                    <Link href="/auth/login" className="text-black hover:underline">
+                    <Link href="/auth/login" className="text-foreground hover:underline">
                         Login
                     </Link>
                 </div>

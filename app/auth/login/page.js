@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from "react";
+import { setPersistence, browserLocalPersistence, browserSessionPersistence } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 import Link from "next/link";
 
 import { motion } from "framer-motion";
@@ -26,11 +28,12 @@ import AuthContext from "@/components/providers/AuthProvider";
 
 function LoginPage() {
 
+    const [submitting, setSubmitting] = useState(false);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState(null);
-    // const [rememberMe, setRememberMe] = useState(false);
+    const [rememberMe, setRememberMe] = useState(true);
 
 
     const { login, loginWithGoogle, googleLoading, loading } = useContext(AuthContext);
@@ -40,7 +43,9 @@ function LoginPage() {
         // const persistence = rememberMe ? browserLocalPersistence : browserSessionPersistence;
         // await setPersistence(auth, persistence);
 
+        setSubmitting(true);
         try {
+            await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
             await login(email, password);
             toast.success("Logged in successfully!");
             // console.log("Logged in successfully!");
@@ -48,22 +53,22 @@ function LoginPage() {
             console.log("Login error:", error.message);
             toast.error("Invalid email or password. Please try again.");
             setError("Invalid email or password. Please try again.");
-        }
+        } finally { setSubmitting(false); }
     };
 
 
     return (
-        <div className="flex items-center justify-center min-h-screen p-4">
+        <div className="flex w-full items-center justify-center p-4">
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
-                className="w-full max-w-md bg-white rounded-lg shadow-lg p-8"
+                className="w-full max-w-md bg-card rounded-2xl border border-border shadow-none p-7 sm:p-9"
             >
-                <div className="bg-white rounded-2xl  space-y-6">
+                <div className="bg-card rounded-2xl  space-y-6">
                     <div className="text-center space-y-2">
-                        <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-                            Welcome Back
+                        <h1 className="text-3xl font-medium tracking-tight text-foreground">
+                            Welcome back
                         </h1>
                         <p className="text-muted-foreground text-sm">
                             Please enter your email and password to continue.
@@ -71,7 +76,7 @@ function LoginPage() {
                     </div>
                     <form className="space-y-6" onSubmit={handleSubmit}>
                         {error && (
-                            <div className="text-red-600 text-sm font-medium text-center">
+                            <div className="text-foreground text-sm font-medium text-center">
                                 {error}
                             </div>
                         )}
@@ -81,7 +86,7 @@ function LoginPage() {
                             <Input
                                 id="email"
                                 type="email"
-                                placeholder="prodgain@gmail.com"
+                                placeholder="you@example.com"
                                 value={email}
                                 onChange={(e) => {
                                     setEmail(e.target.value)
@@ -107,8 +112,9 @@ function LoginPage() {
                                 />
                                 <button
                                     type="button"
+                                    aria-label={showPassword ? "Hide password" : "Show password"}
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none cursor-pointer"
+                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground rounded-sm focus-visible:outline-2 focus-visible:outline-ring cursor-pointer"
                                 >
                                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                 </button>
@@ -120,8 +126,8 @@ function LoginPage() {
                             <div className="flex items-center space-x-2" >
                                 <Checkbox
                                     id="remember"
-                                // checked={rememberMe}
-                                // onCheckedChange={(checked) => setRememberMe(!!checked)}
+                                checked={rememberMe}
+                                onCheckedChange={(checked) => setRememberMe(!!checked)}
                                 />
                                 <Label htmlFor="remember" className="text-sm">
                                     Remember me
@@ -131,16 +137,16 @@ function LoginPage() {
                                 Forgot password?
                             </Link>
                         </div>
-                        <Button type="submit" className="w-full">
-                            Login
+                        <Button type="submit" className="w-full" disabled={submitting || googleLoading} aria-busy={submitting}>
+                            {submitting ? "Signing in…" : "Login"}
                         </Button>
                     </form>
                     <div className="relative">
                         <div className="absolute inset-0 flex items-center">
-                            <span className="w-full border-t border-gray-300" />
+                            <span className="w-full border-t border-border" />
                         </div>
-                        <div className="relative flex justify-center text-sm text-gray-500 uppercase">
-                            <span className="bg-white px-2">Or continue with</span>
+                        <div className="relative flex justify-center text-sm text-muted-foreground">
+                            <span className="bg-card px-2">Or continue with</span>
                         </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
@@ -148,14 +154,14 @@ function LoginPage() {
                             <Mail size={18} />
                             <span>{googleLoading ? 'Signing in…' : 'Google'}</span>
                         </Button>
-                        <Button variant="outline" className="w-full cursor-not-allowed">
+                        <Button variant="outline" className="w-full" disabled title="GitHub sign-in is not available yet">
                             <Github size={18} />
                             <span>GitHub</span>
                         </Button>
                     </div>
-                    <div className="text-center text-sm text-gray-500">
+                    <div className="text-center text-sm text-muted-foreground">
                         Don't have an account?{" "}
-                        <Link href="/auth/register" className="text-black hover:underline">
+                        <Link href="/auth/register" className="text-foreground hover:underline">
                             Sign up
                         </Link>
                     </div>

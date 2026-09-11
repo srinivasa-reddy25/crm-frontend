@@ -8,7 +8,7 @@ export function QueryProvider({ children }) {
     return (
         <QueryClientProvider client={queryClient}>
             {children}
-            {process.env.NODE_ENV === 'development' && <ReactQueryDevtools initialIsOpen={false} />}
+            {process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_SHOW_DEVTOOLS === 'true' && <ReactQueryDevtools initialIsOpen={false} />}
         </QueryClientProvider>
     );
 }

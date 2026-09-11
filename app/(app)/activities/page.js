@@ -25,14 +25,16 @@ import { useRef, useEffect, useState } from "react";
 
 
 const iconMap = {
-    contact_created: <Plus className="h-4 w-4 text-green-500" />,
-    contact_deleted: <Trash2 className="h-4 w-4 text-red-500" />,
-    contact_updated: <Pencil className="h-4 w-4 text-yellow-500" />,
-    bulk_delete: <ListChecks className="h-4 w-4 text-purple-500" />,
-    bulk_import: <ListChecks className="h-4 w-4 text-blue-500" />,
-    user_login: <LogIn className="h-4 w-4 text-blue-500" />,
-    user_logout: <LogIn className="h-4 w-4 text-gray-500" />
+    contact_created: <Plus className="h-4 w-4 text-foreground" />,
+    contact_deleted: <Trash2 className="h-4 w-4 text-foreground" />,
+    contact_updated: <Pencil className="h-4 w-4 text-foreground" />,
+    bulk_delete: <ListChecks className="h-4 w-4 text-foreground" />,
+    bulk_import: <ListChecks className="h-4 w-4 text-foreground" />,
+    user_login: <LogIn className="h-4 w-4 text-foreground" />,
+    user_logout: <LogIn className="h-4 w-4 text-muted-foreground" />
 };
+
+const actionLabels = { contact_created: "contact created", contact_deleted: "contact deleted", contact_updated: "contact updated", bulk_delete: "contacts deleted", bulk_import: "contacts imported", user_login: "signed in", user_logout: "signed out" };
 
 function Activities() {
     const [selectedAction, setSelectedAction] = useState("all");
@@ -99,10 +101,10 @@ function Activities() {
 
     return (
         <>
-            <div className="flex flex-wrap items-center justify-between px-4 gap-2 sm:gap-4 py-4 bg-background">
-                <div className="flex flex-wrap gap-2 sm:gap-4 items-center">
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-3 bg-background">
+                <div className="flex flex-wrap gap-2 items-center">
 
-                    <CalendarDialog onApply={(range) => setDateRange(range)} />
+                    <CalendarDialog value={dateRange} onApply={setDateRange} />
 
                     <Select
                         value={selectedAction}
@@ -111,7 +113,7 @@ function Activities() {
                         <SelectTrigger className="w-[180px] sm:w-[200px]">
                             <SelectValue placeholder="Filter by action" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent position="popper" side="bottom" align="start" sideOffset={6}>
                             <SelectItem value="all">All Actions</SelectItem>
                             <SelectItem value="contact_created">Contact Created</SelectItem>
                             <SelectItem value="contact_deleted">Contact Deleted</SelectItem>
@@ -127,24 +129,23 @@ function Activities() {
                     variant="ghost"
                     className="text-sm"
                     onClick={() => {
-                        setSelectedAction("");
+                        setSelectedAction("all");
                         setDateRange(undefined);
-                        refetch();
                     }}
                 >
                     Clear Filters
                 </Button>
             </div>
 
-            {(selectedAction || dateRange?.from) && (
-                <div className="text-center text-sm text-muted-foreground mb-4">
+            {(selectedAction !== "all" || dateRange?.from) && (
+                <div className="text-xs text-muted-foreground mb-3">
                     <span className="inline-block">
-                        {selectedAction && (
+                        {selectedAction !== "all" && (
                             <>
                                 Action: <strong className="capitalize">{selectedAction.replace("_", " ")}</strong>
                             </>
                         )}
-                        {selectedAction && dateRange?.from && " | "}
+                        {selectedAction !== "all" && dateRange?.from && " | "}
                         {dateRange?.from && (
                             <>
                                 Date: <strong>{dateRange.from.toDateString()}</strong>
@@ -157,36 +158,36 @@ function Activities() {
 
 
 
-            <div className="flex flex-1 flex-col gap-4 p-4 pt-0 bg-light dark:bg-dark overflow-y-auto">
+            <div className="activity-feed flex flex-1 flex-col overflow-y-auto">
                 {isLoading ? (
                     <div className="text-center py-6">
                         <Loader2 className="animate-spin mx-auto" />
                         <p className="mt-2 text-muted-foreground">Loading activities...</p>
                     </div>
                 ) : isError ? (
-                    <div className="text-red-500 text-center">Error: {error.message}</div>
+                    <div className="text-foreground text-center">Error: {error.message}</div>
                 ) : (
                     <>
                         {data?.pages.map((page, index) => (
-                            <div key={index} className="space-y-4">
+                            <div key={index} className="activity-page">
                                 {page.activities.map((activity) => (
-                                    <Card key={activity._id} className="shadow-sm">
+                                    <Card key={activity._id} className="activity-row compact-activity">
                                         <CardHeader className="flex flex-col sm:flex-row justify-between sm:items-center gap-1">
-                                            <div className="flex items-center gap-2">
-                                                {iconMap[activity.action] || <ListChecks className="h-4 w-4 text-gray-400" />}
-                                                <p className="text-base font-semibold">
+                                            <div className="flex items-center gap-3">
+                                                <span className="activity-icon">{iconMap[activity.action] || <ListChecks className="h-4 w-4 text-muted-foreground" />}</span>
+                                                <p className="text-sm font-medium">
                                                     {activity.entityName || activity.details?.contactName || "System"}{" "}
                                                     <span className="font-normal text-muted-foreground">
-                                                        {activity.action.replace("_", " ")}
+                                                        {actionLabels[activity.action] || activity.action.replaceAll("_", " ")}
                                                     </span>
                                                 </p>
                                             </div>
-                                            <Badge variant="outline" className="capitalize text-xs">
+                                            <div className="flex items-center gap-3 shrink-0"><time className="text-xs text-muted-foreground" dateTime={activity.timestamp} title={new Date(activity.timestamp).toLocaleString()}>{formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}</time><Badge variant="outline" className="capitalize text-xs">
                                                 {activity.entityType}
-                                            </Badge>
+                                            </Badge></div>
                                         </CardHeader>
 
-                                        <CardContent className="space-y-2 text-sm">
+                                        <CardContent className="space-y-1 text-sm">
                                             {activity.details?.email && (
                                                 <p>
                                                     <span className="text-muted-foreground">Email:</span> {activity.details.email}
@@ -206,11 +207,11 @@ function Activities() {
                                                         {Object.entries(activity.details.changes).map(([field, val]) => (
                                                             <li key={field}>
                                                                 <span className="capitalize">{field}</span>:{" "}
-                                                                <span className="text-red-500 line-through">
+                                                                <span className="text-foreground line-through">
                                                                     {Array.isArray(val.from) ? val.from.join(', ') : val.from}
                                                                 </span>{" "}
                                                                 →{" "}
-                                                                <span className="text-green-600">
+                                                                <span className="text-foreground">
                                                                     {Array.isArray(val.to) ? val.to.join(', ') : val.to}
                                                                 </span>
                                                             </li>
@@ -219,28 +220,6 @@ function Activities() {
                                                 </div>
                                             )}
 
-
-                                            {/* {activity.action === "user_logout" && (
-                                                <div className="space-y-1">
-                                                    <p className="text-muted-foreground text-sm">
-                                                        User <span className="font-medium">{activity.entityName}</span> logged out.
-                                                    </p>
-                                                    {activity.details?.email && (
-                                                        <p className="text-sm text-muted-foreground">Email: {activity.details.email}</p>
-                                                    )}
-                                                </div>
-                                            )} */}
-
-                                            {activity.action === "user_login" && (
-                                                <div className="space-y-1">
-                                                    <p className="text-muted-foreground text-sm">
-                                                        User <span className="font-medium">{activity.entityName}</span> logged in.
-                                                    </p>
-                                                    {/* {activity.details?.email && (
-                                                        <p className="text-sm text-muted-foreground">Email: {activity.details.email}</p>
-                                                    )} */}
-                                                </div>
-                                            )}
 
                                             {(activity.action === "bulk_import") && (
                                                 <div className="space-y-1 pt-1 text-sm">
@@ -254,7 +233,7 @@ function Activities() {
                                                     {activity.details.failedReasons?.length > 0 && (
                                                         <>
                                                             <p className="text-muted-foreground pt-1">Failure Reasons:</p>
-                                                            <ul className="ml-4 list-disc text-xs text-red-600">
+                                                            <ul className="ml-4 list-disc text-xs text-foreground">
                                                                 {activity.details.failedReasons.map((fail, idx) => (
                                                                     <li key={idx}>
                                                                         {fail?.row?.email || "Unknown"} — {fail?.reason}
@@ -287,11 +266,7 @@ function Activities() {
 
 
 
-                                            <div className="text-right">
-                                                <Badge variant="secondary" className="text-xs">
-                                                    {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
-                                                </Badge>
-                                            </div>
+
                                         </CardContent>
 
                                     </Card>
@@ -319,7 +294,7 @@ function Activities() {
 
 
                         {!hasNextPage && (
-                            <p className="text-center text-muted-foreground text-sm">
+                            <p className="text-center text-muted-foreground text-xs py-4">
                                 You&apos;ve reached the end.
                             </p>
                         )}

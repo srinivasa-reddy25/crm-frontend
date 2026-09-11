@@ -1,4 +1,5 @@
 "use client"
+import { tagColor } from '@/lib/tag-colors';
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -97,19 +98,7 @@ function Contact() {
 
 
     console.log("Contacts Data:", contacts);
-    const fallbackContacts = [
-        {
-            id: "X7d93kA8sLp0wErTgqVn91UyZbNmKj2L",
-            initials: "JS",
-            name: "John Smith",
-            email: "john.smith@techcorp.com",
-            company: "TechCorp",
-            tags: ["Hot Lead", "VIP"],
-            tagColors: ["destructive", "secondary"],
-            lastInteraction: "2 days ago",
-        },
-    ]
-    const displayContacts = isContactsError ? fallbackContacts : contacts;
+    const displayContacts = contacts;
     console.log("Contacts:", displayContacts);
 
 
@@ -260,24 +249,18 @@ function Contact() {
     //     return 
     // }
     // if (isContactsError) {
-    //     return <p className="text-red-500">Error loading contacts: {contactsError}</p>;
+    //     return <p className="text-foreground">Error loading contacts: {contactsError}</p>;
     // }
 
 
     return (
         <>
 
-            <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-                <div className="flex items-center justify-between gap-2">
-                    <div className="flex flex-col space-y-1">
-                        <h2 className="text-2xl font-bold tracking-tight">Contacts</h2>
-                        <p className="text-muted-foreground">Manage your contact database</p>
-                    </div>
-                </div>
+            <div className="flex flex-1 flex-col gap-5">
                 <>
-                    <div className="flex items-center justify-between gap-2">
-                        <div className="flex flex-1 items-center gap-2">
-                            <Input type="text" placeholder="Search contacts..." value={searchQuery} className="w-[300px]" onChange={e => setSearchQuery(e.target.value)} />
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex flex-1 flex-wrap items-center gap-2">
+                            <Input type="text" placeholder="Search contacts..." value={searchQuery} className="w-full sm:w-[260px]" onChange={e => setSearchQuery(e.target.value)} />
                             <DropdownMenu >
                                 <DropdownMenuTrigger asChild>
                                     <Button variant="outline" className="gap-2">
@@ -302,11 +285,11 @@ function Contact() {
                                         >
                                             <div
                                                 className="h-3 w-3 rounded-full"
-                                                style={{ backgroundColor: tag.color || '#888888' }}
+                                                style={{ backgroundColor: "var(--muted-foreground)" }}
                                             />
                                             {tag.name}
                                             {selectedTags.includes(tag._id) && (
-                                                <Check className="ml-auto h-4 w-4 text-green-500" />
+                                                <Check className="ml-auto h-4 w-4 text-foreground" />
                                             )}
                                         </DropdownMenuItem>
                                     ))}
@@ -314,25 +297,29 @@ function Contact() {
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                             <ImportCsvDialog />
                             {/* <Button variant="outline">Import CSV</Button> */}
-                            <div className="p-6">
+                            <div>
                                 <AddContactDialog />
                             </div>
-                            <Button variant={viewMode === "table" ? "outline" : "ghost"} size="icon" onClick={() => setViewMode("table")}>
+                            <div className="flex items-center gap-1">
+                            <Button variant={viewMode === "table" ? "outline" : "ghost"} size="icon" aria-label="Table view" aria-pressed={viewMode === "table"} onClick={() => setViewMode("table")}>
                                 <ListIcon className="w-4 h-4" />
                             </Button>
-                            <Button variant={viewMode === "grid" ? "outline" : "ghost"} size="icon" onClick={() => setViewMode("grid")}>
+                            <Button variant={viewMode === "grid" ? "outline" : "ghost"} size="icon" aria-label="Grid view" aria-pressed={viewMode === "grid"} onClick={() => setViewMode("grid")}>
                                 <LayoutGridIcon className="w-4 h-4" />
                             </Button>
+                            </div>
                         </div>
                     </div>
                     {
                         isContactsLoading && <p className="text-muted-foreground">Loading contacts...</p>
                     }
+                    {isContactsError && <div role="alert" className="rounded-lg border p-4 text-sm">Could not load contacts. Please refresh to try again.</div>}
+                    {!isContactsLoading && !isContactsError && !contacts.length && <div role="status" className="workspace-empty">No contacts match this view. Try clearing your filters or add a contact.</div>}
                     {selectedContactIds.length > 0 && (
-                        <div className="border rounded-md p-4 flex justify-between items-center bg-muted">
+                        <div className="border rounded-md p-3 flex flex-wrap gap-3 justify-between items-center bg-muted">
                             <div className="font-medium">
                                 {selectedContactIds.length} contact{selectedContactIds.length > 1 ? 's' : ''} selected
                             </div>
@@ -352,14 +339,15 @@ function Contact() {
 
                     <>
                         {viewMode === "table" ? (
-                            <div className="rounded-sm border bg-background text-foreground shadow-sm">
-                                <Table className={"border-separate border-spacing-y-2"}>
+                            <div className="contact-table rounded-xl border bg-background text-foreground overflow-hidden">
+                                <Table className="contact-table-body">
                                     <TableHeader>
                                         <TableRow className="bg-muted">
                                             <TableHead className="w-10">
                                                 <Checkbox
                                                     className="cursor-pointer"
-                                                    checked={selectedContactIds.length === contacts.length}
+                                                    aria-label="Select all contacts"
+                                                    checked={contacts.length > 0 && selectedContactIds.length === contacts.length}
                                                     onCheckedChange={(checked) => {
                                                         setSelectedContactIds(checked ? contacts.map((c) => c._id) : []);
                                                     }}
@@ -374,9 +362,13 @@ function Contact() {
                                     </TableHeader>
                                     <TableBody>
                                         {displayContacts.map((contact, index) => (
-                                            <TableRow key={index}>
+                                            <TableRow key={contact._id} className="contact-click-row" onClick={(event) => {
+                                                if (event.target.closest('button, a, input, [role="menuitem"], [role="checkbox"]') || window.getSelection()?.toString()) return;
+                                                onClikingContactDetails(contact._id);
+                                            }}>
                                                 <TableCell>
                                                     <Checkbox
+                                                        aria-label={`Select ${contact.name}`}
                                                         checked={selectedContactIds.includes(contact._id)}
                                                         onCheckedChange={(checked) => {
                                                             setSelectedContactIds((prev) =>
@@ -388,13 +380,13 @@ function Contact() {
                                                         className={"cursor-pointer"}
                                                     /></TableCell>
                                                 <TableCell>
-                                                    <div className="flex items-center gap-3 cursor-pointer" onClick={() => onClikingContactDetails(contact._id)}>
+                                                    <div className="flex items-center gap-2.5">
                                                         <Avatar>
                                                             <AvatarFallback>{getInitials(contact.name)}</AvatarFallback>
                                                         </Avatar>
                                                         <div>
-                                                            <div className="font-medium">{contact.name}</div>
-                                                            <div className="text-sm text-muted-foreground">{contact.email}</div>
+                                                            <button type="button" className="font-medium text-left hover:underline" onClick={() => onClikingContactDetails(contact._id)}>{contact.name}</button>
+                                                            <div className="text-xs text-muted-foreground">{contact.email}</div>
                                                         </div>
                                                     </div>
                                                 </TableCell>
@@ -406,10 +398,7 @@ function Contact() {
                                                         <Badge
                                                             key={i}
                                                             variant="outline"
-                                                            style={{
-                                                                borderColor: tag.color || '#888888',
-                                                                color: tag.color || '#888888'
-                                                            }}
+                                                            style={{ borderColor: `color-mix(in srgb, ${tagColor(tag.color)} 55%, var(--border))`, color: 'var(--foreground)', backgroundColor: `color-mix(in srgb, ${tagColor(tag.color)} 16%, var(--background))` }}
                                                         >
                                                             {tag.name}
                                                         </Badge>
@@ -419,7 +408,7 @@ function Contact() {
                                                 <TableCell className="text-right">
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" size="icon">
+                                                            <Button variant="ghost" size="icon" aria-label={`Actions for ${contact.name}`}>
                                                                 <MoreHorizontal className="h-4 w-4" />
                                                             </Button>
                                                         </DropdownMenuTrigger>
@@ -429,9 +418,9 @@ function Contact() {
                                                             </DropdownMenuItem>
                                                             <DropdownMenuItem
                                                                 onClick={() => handleDeleteClick(contact._id)}
-                                                                className="text-red-600"
+                                                                className="text-foreground"
                                                             >
-                                                                <Trash2 className="text-red-600" /> Delete
+                                                                <Trash2 className="text-foreground" /> Delete
                                                             </DropdownMenuItem>
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>
@@ -444,12 +433,13 @@ function Contact() {
                             </div>
                         ) :
                             (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-4">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
                                     {displayContacts.map((contact, index) => (
-                                        <Card key={index} className="p-4">
+                                        <Card key={index} className="contact-grid-card p-5">
                                             <div className="flex items-start justify-between">
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex flex-wrap items-center gap-2">
                                                     <Checkbox
+                                                        aria-label={`Select ${contact.name}`}
                                                         checked={selectedContactIds.includes(contact._id)}
                                                         onCheckedChange={(checked) => {
                                                             setSelectedContactIds((prev) =>
@@ -463,8 +453,8 @@ function Contact() {
                                                     <Avatar>
                                                         <AvatarFallback>{getInitials(contact.name)}</AvatarFallback>
                                                     </Avatar>
-                                                    <div className="cursor-pointer transition-colors p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 hover:bg-opacity-70" onClick={() => onClikingContactDetails(contact._id)}>
-                                                        <div className="font-semibold">{contact.name}</div>
+                                                    <div className="cursor-pointer transition-colors p-2 rounded-md hover:bg-muted dark:hover:bg-muted hover:bg-opacity-70" onClick={() => onClikingContactDetails(contact._id)}>
+                                                        <div className="font-medium">{contact.name}</div>
                                                         <div className="text-sm text-muted-foreground">
                                                             {contact.email}
                                                         </div>
@@ -475,7 +465,7 @@ function Contact() {
                                                 </div>
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon">
+                                                        <Button variant="ghost" size="icon" aria-label={`Actions for ${contact.name}`}>
                                                             <MoreHorizontal className="h-4 w-4" />
                                                         </Button>
                                                     </DropdownMenuTrigger>
@@ -486,7 +476,7 @@ function Contact() {
                                                             Edit
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem
-                                                            className="text-red-500"
+                                                            className="text-foreground"
                                                             onClick={() => handleDeleteClick(contact._id)}
                                                         >Delete</DropdownMenuItem>
                                                     </DropdownMenuContent>
@@ -495,10 +485,7 @@ function Contact() {
                                             <div className="mt-2 flex flex-wrap gap-2">
                                                 {contact.tags.map((tag, index) => (
                                                     <Badge key={index} variant="outline"
-                                                        style={{
-                                                            borderColor: tag.color || '#888888',
-                                                            color: tag.color || '#888888'
-                                                        }}>{tag.name}</Badge>
+                                                        style={{ borderColor: `color-mix(in srgb, ${tagColor(tag.color)} 55%, var(--border))`, color: 'var(--foreground)', backgroundColor: `color-mix(in srgb, ${tagColor(tag.color)} 16%, var(--background))` }}>{tag.name}</Badge>
                                                 ))}
                                             </div>
                                             <div className="text-sm text-muted-foreground mt-2">
@@ -512,6 +499,7 @@ function Contact() {
                     </>
                     <div className="flex justify-end mt-4">
                         <select
+                            aria-label="Contacts per page"
                             value={itemsPerPage}
                             onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
                             className="border rounded px-2 py-1"

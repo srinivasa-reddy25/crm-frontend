@@ -1,92 +1,29 @@
 'use client';
 import { AppSidebar } from '@/components/app-sidebar';
-import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
-
-import { SidebarInset } from '@/components/ui/sidebar';
-
-
+import { SidebarProvider } from '@/components/ui/sidebar';
 import { UserProvider } from '@/components/providers/UserContext';
 import { useQuery } from '@tanstack/react-query';
 import { getUserProfile } from '@/services/profileApi';
-
-
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbList,
-    BreadcrumbPage,
-} from "@/components/ui/breadcrumb"
-import { Separator } from "@/components/ui/separator"
-// import { SidebarTrigger } from "@/components/ui/sidebar"
-import { ModeToggle } from "@/components/mode-toggle"
-
+import { ModeToggle } from '@/components/mode-toggle';
 import { usePathname } from 'next/navigation';
 
-
-
-
-
-import { NavUser } from "@/components/nav-user"
-
+const titles = { dashboard: 'Dashboard', contacts: 'Contacts', activities: 'Activities', tags: 'Tags', chat: 'AI Assistant', profile: 'Profile' };
 export default function AppLayout({ children }) {
-    const {
-        data: userData,
-        isLoading,
-        isError,
-        error,
-    } = useQuery({
-        queryKey: ['userProfile'],
-        queryFn: getUserProfile,
-    });
-    const pathname = usePathname();
-
-    const capitalize = str => str.charAt(0).toUpperCase() + str.slice(1);
-
-
-
-
-    if (isLoading) return <div>Loading...</div>;
-    if (isError) return <div>Failed to load user profile</div>;
-
-
-    const actualUser = {
-        user: {
-            name: userData.user?.displayName,
-            email: userData.user.email,
-            avatar: userData.user.profilePicture,
-        }
-    }
-
-    return (
-
-        <UserProvider value={{ userData: userData.user, isLoading, isError, error }}>
-            <SidebarProvider>
-                <AppSidebar />
-                <div className="flex-1 flex flex-col">
-                    <header className="flex h-16 shrink-0 items-center gap-2">
-                        <div className="flex items-center gap-2 px-4 w-full justify-between" >
-                            <div className="flex items-center gap-2 px-4">
-                                <SidebarTrigger className="-ml-1" />
-                                <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
-                                <Breadcrumb>
-                                    <BreadcrumbList>
-                                        <BreadcrumbItem>
-                                            <BreadcrumbPage>{capitalize(pathname.slice(1,))}</BreadcrumbPage>
-                                        </BreadcrumbItem>
-                                    </BreadcrumbList>
-                                </Breadcrumb>
-                                <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
-                                <ModeToggle />
-                            </div>
-                            {/* <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" /> */}
-                            <div className="flex items-center gap-2">
-                                <NavUser user={actualUser.user} />
-                            </div>
-                        </div>
-                    </header>
-                    {children}
-                </div>
-            </SidebarProvider>
-        </UserProvider>
-    );
+  const { data, isLoading, isError, error } = useQuery({ queryKey: ['userProfile'], queryFn: getUserProfile });
+  const pathname = usePathname();
+  const section = pathname.split('/')[1];
+  const title = section === 'contacts' && pathname.split('/')[2] ? 'Contact details' : titles[section] || 'Dashboard';
+  if (isLoading) return <div className="flex min-h-svh items-center justify-center text-sm text-muted-foreground" role="status">Loading your workspace…</div>;
+  if (isError) return <div className="p-8 text-sm text-destructive" role="alert">Could not load your profile. Please refresh to try again.</div>;
+  return <UserProvider value={{ userData: data.user, isLoading, isError, error }}>
+    <SidebarProvider style={{ '--sidebar-width': '13.5rem', '--sidebar-width-icon': '3.5rem' }}>
+      <AppSidebar />
+      <div className="workspace-shell ml-14 flex min-w-0 flex-1 flex-col md:ml-0">
+        <header className="workspace-header flex h-12 shrink-0 items-center justify-between px-4 sm:px-6">
+          <h1 className="text-sm font-medium tracking-tight">{title}</h1><ModeToggle />
+        </header>
+        <main className="crm-content flex min-w-0 flex-1 flex-col">{children}</main>
+      </div>
+    </SidebarProvider>
+  </UserProvider>;
 }

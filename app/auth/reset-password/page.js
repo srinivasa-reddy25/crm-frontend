@@ -14,12 +14,14 @@ import { useRouter } from 'next/navigation';
 
 function ForgotPasswordPage() {
     const router = useRouter();
+    const [submitting, setSubmitting] = useState(false);
     const [email, setEmail] = useState('');
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
 
     const handleReset = async (e) => {
         e.preventDefault();
+        setSubmitting(true);
         setError('');
         setMessage('');
 
@@ -27,9 +29,7 @@ function ForgotPasswordPage() {
             await sendPasswordResetEmail(auth, email);
 
             setMessage("If an account exists for this email, a password reset link has been sent. Please check your inbox and spam folder.");
-            setTimeout(() => {
-                router.push("/auth/login");
-            }, 4000);
+
 
         } catch (err) {
             console.error('Reset error:', err);
@@ -40,16 +40,16 @@ function ForgotPasswordPage() {
             } else {
                 setError('Something went wrong. Please try again.');
             }
-        }
+        } finally { setSubmitting(false); }
     };
 
     return (
-        <div className="flex items-center justify-center min-h-screen p-4">
+        <div className="flex w-full items-center justify-center p-4">
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}
-                className="w-full max-w-md bg-white rounded-lg shadow-md p-6"
+                className="w-full max-w-md bg-card rounded-2xl border border-border shadow-sm p-6"
             >
                 <h2 className="text-xl font-bold mb-4 text-center">Reset Password</h2>
                 <form onSubmit={handleReset} className="space-y-4">
@@ -63,13 +63,14 @@ function ForgotPasswordPage() {
                             onChange={(e) => setEmail(e.target.value)}
                             required
                         />
-                        {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
-                        {message && <p className="text-sm text-green-600 mt-1">{message}</p>}
+                        {error && <p className="text-sm text-foreground mt-1">{error}</p>}
+                        {message && <p className="text-sm text-foreground mt-1">{message}</p>}
                     </div>
-                    <Button type="submit" className="w-full">
-                        Send Reset Link
+                    <Button type="submit" className="w-full" disabled={submitting}>
+                        {submitting ? "Sending…" : "Send Reset Link"}
                     </Button>
                 </form>
+                <Button variant="ghost" className="mt-3 w-full" onClick={() => router.push("/auth/login")}>Back to login</Button>
             </motion.div>
         </div>
     );

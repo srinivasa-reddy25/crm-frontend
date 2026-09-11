@@ -152,23 +152,25 @@ export default function ProfileClient() {
   return (
     <>
 
-      <div className="flex flex-1 flex-col gap-4 p-4 pt-0 bg-light dark:bg-dark">
-        <CardContent className="space-y-6">
+      <div className="profile-panel">
+        <CardContent className="space-y-7 p-6 sm:p-8">
           {/* Avatar Section */}
-          <div className="flex flex-col items-center space-y-4">
+          <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
             <div className="relative">
-              <Avatar className="w-24 h-24">
+              <Avatar className="w-16 h-16">
                 <AvatarImage src={avatarUrl} alt="Profile picture" />
                 <AvatarFallback className="text-lg">
                   {getInitials(displayName)}
                 </AvatarFallback>
               </Avatar>
-              <label
-                htmlFor="avatar-upload"
-                className="absolute -bottom-2 -right-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-2 cursor-pointer transition-colors shadow-lg"
+              <button
+                type="button"
+                aria-label="Change profile picture"
+                onClick={() => document.getElementById("avatar-upload")?.click()}
+                className="absolute -bottom-2 -right-2 bg-primary hover:opacity-90 text-primary-foreground rounded-full p-2 cursor-pointer transition-colors shadow-lg"
               >
                 <Camera className="w-4 h-4" />
-              </label>
+              </button>
               <input
                 id="avatar-upload"
                 type="file"
@@ -177,7 +179,7 @@ export default function ProfileClient() {
                 className="hidden"
               />
             </div>
-            <p className="text-sm text-gray-500 text-center">
+            <p className="text-sm text-muted-foreground max-w-64">
               Click the camera icon to upload a new profile picture
             </p>
           </div>
@@ -202,9 +204,9 @@ export default function ProfileClient() {
                 id="email"
                 value={userData.email}
                 readOnly
-                className="bg-gray-50 cursor-not-allowed"
+                className="bg-muted cursor-not-allowed"
               />
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-muted-foreground">
                 Email address cannot be changed
               </p>
             </div>
@@ -225,7 +227,7 @@ export default function ProfileClient() {
               href="https://myaccount.google.com/security"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm text-blue-600 hover:underline"
+              className="text-sm text-foreground hover:underline"
             >
               Manage your password in your Google Account
             </a>
@@ -260,7 +262,7 @@ export default function ProfileClient() {
 
               <Button
                 onClick={handleChangePassword}
-                className="px-8 ml-4 bg-yellow-600 hover:bg-yellow-700"
+                className="px-6 bg-primary text-primary-foreground hover:opacity-90"
                 disabled={isSaving}
               >
                 Change Password

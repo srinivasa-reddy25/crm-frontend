@@ -1,4 +1,5 @@
 'use client';
+import { tagColor } from '@/lib/tag-colors';
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -113,6 +114,8 @@ export function AddContactDialog() {
         } catch (error) {
             console.error('Error creating contact:', error);
             toast.error('Failed to create contact. Please try again.');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -160,56 +163,57 @@ export function AddContactDialog() {
             <DialogTrigger asChild>
                 <Button>Add Contact</Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="contact-editor">
                 <DialogHeader>
                     <DialogTitle>Add New Contact</DialogTitle>
                     <DialogDescription>Fill in the details below</DialogDescription>
                 </DialogHeader>
 
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mt-4">
+                <form onSubmit={handleSubmit(onSubmit)} className="contact-editor-form">
+                    <div className="contact-editor-body">
                     <div className="grid gap-2">
-                        <Label htmlFor="name">Name</Label>
-                        <Input {...register('name')} />
+                        <Label htmlFor="add-contact-name">Name</Label>
+                        <Input id="add-contact-name" {...register('name')} aria-invalid={!!errors.name} aria-describedby={errors.name ? "add-contact-name-error" : undefined} />
                         {errors.name && (
-                            <p className="text-red-500 text-sm">{errors.name.message}</p>
+                            <p id="add-contact-name-error" role="alert" className="text-foreground text-xs">{errors.name.message}</p>
                         )}
                     </div>
 
                     <div className="grid gap-2">
-                        <Label htmlFor="email">Email</Label>
-                        <Input type="email" {...register('email')} />
+                        <Label htmlFor="add-contact-email">Email</Label>
+                        <Input type="email" id="add-contact-email" {...register('email')} aria-invalid={!!errors.email} aria-describedby={errors.email ? "add-contact-email-error" : undefined} />
                         {errors.email && (
-                            <p className="text-red-500 text-sm">{errors.email.message}</p>
+                            <p id="add-contact-email-error" role="alert" className="text-foreground text-xs">{errors.email.message}</p>
                         )}
                     </div>
 
                     <div className="grid gap-2">
-                        <Label htmlFor="phone">Phone</Label>
-                        <Input {...register('phone')} />
+                        <Label htmlFor="add-contact-phone">Phone</Label>
+                        <Input id="add-contact-phone" {...register('phone')} aria-invalid={!!errors.phone} aria-describedby={errors.phone ? "add-contact-phone-error" : undefined} />
                         {errors.phone && (
-                            <p className="text-red-500 text-sm">{errors.phone.message}</p>
+                            <p id="add-contact-phone-error" role="alert" className="text-foreground text-xs">{errors.phone.message}</p>
                         )}
                     </div>
 
                     <div className="grid gap-2">
-                        <Label htmlFor="company">Company</Label>
-                        <Input {...register('company')} />
+                        <Label htmlFor="add-contact-company">Company</Label>
+                        <Input id="add-contact-company" {...register('company')} aria-invalid={!!errors.company} />
                     </div>
 
-                    <div className="grid gap-2">
-                        <Label htmlFor="notes">Notes</Label>
-                        <Textarea {...register('notes')} />
+                    <div className="grid gap-2 sm:col-span-2">
+                        <Label htmlFor="add-contact-notes">Notes</Label>
+                        <Textarea id="add-contact-notes" {...register('notes')} aria-invalid={!!errors.notes} />
                     </div>
 
-                    <div className="grid gap-2">
+                    <div className="grid gap-2 sm:col-span-2">
                         <Label>Tags</Label>
                         <div className="flex flex-wrap gap-2">
                             <>
                                 {
                                     isLoadingTags ? (
-                                        <span className="text-sm text-gray-500">Loading tags...</span>
+                                        <span className="text-sm text-muted-foreground">Loading tags...</span>
                                     ) : tagError ? (
-                                        <span className="text-sm text-red-500">{tagError}</span>
+                                        <span className="text-sm text-foreground">{tagError}</span>
                                     ) : (
                                         <>
                                             {availableTags.map((tag, index) => (
@@ -221,10 +225,11 @@ export function AddContactDialog() {
                                                         { 'bg-opacity-50': selectedTags.includes(tag._id) }
                                                     )}
                                                     style={{
-                                                        backgroundColor: selectedTags.includes(tag._id) ? tag.color : 'transparent',
-                                                        borderColor: tag.color,
-                                                        color: selectedTags.includes(tag._id) ? '#fff' : undefined
+                                                        backgroundColor: selectedTags.includes(tag._id) ? `color-mix(in srgb, ${tagColor(tag.color)} 24%, var(--background))` : 'transparent',
+                                                        borderColor: tagColor(tag.color),
+                                                        color: 'var(--foreground)'
                                                     }}
+                                                    aria-pressed={selectedTags.includes(tag._id)}
                                                     onClick={() => toggleTag(tag._id)}
                                                 >
                                                     {tag.name}
@@ -238,9 +243,11 @@ export function AddContactDialog() {
                         </div>
                     </div>
 
+                    </div>
                     <DialogFooter>
+                        <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
 
-                        <Button type="submit" disabled={isSubmitting} className="w-full">{
+                        <Button type="submit" disabled={isSubmitting}>{
                             isSubmitting ? "Saving..." :
                                 "Save"
                         }</Button>

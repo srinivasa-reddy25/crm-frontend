@@ -1,5 +1,8 @@
 "use client"
+import { tagColor } from '@/lib/tag-colors';
 
+import { useState } from "react"
+import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -21,6 +24,7 @@ import { toast } from "sonner"
 export default function Tags() {
 
     const queryClient = useQueryClient();
+    const [search, setSearch] = useState("");
 
 
     const {
@@ -36,6 +40,7 @@ export default function Tags() {
     console.log('Tags data:', tagsData);
 
     const Tags = tagsData?.tags || [];
+    const visibleTags = Tags.filter(tag => tag.name.toLowerCase().includes(search.toLowerCase())).sort((a, b) => (b.usageCount || 0) - (a.usageCount || 0));
 
     const { mutate: deleteTagMutate, isPending: isDeletingTag } = useMutation({
         mutationFn: (id) => deleteTag(id),
@@ -72,12 +77,10 @@ export default function Tags() {
             toast.success('Tag updated successfully!');
             queryClient.invalidateQueries(['tags']); // ⬅️ refetch tag list from server
         },
-        onError: (err) => {
+        onError: (err, variables, context) => {
+            if (context?.previousTags) queryClient.setQueryData(["tags"], context.previousTags);
             console.error('Update failed:', err);
             toast.error('Failed to update tag');
-        },
-        onSuccess: () => {
-            toast.success('Tag updated!');
         },
         onSettled: () => {
             queryClient.invalidateQueries(['tags']);
@@ -102,55 +105,19 @@ export default function Tags() {
 
 
 
-    return (
-        <>
-            <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h2 className="text-2xl font-semibold">Tags</h2>
-                        <p className="text-muted-foreground">Organize your contacts with tags</p>
-                    </div>
-                    <AddTagsDialog
-                        onTagsAdded={(tags) => console.log('Tags added:', tags)}
-                    />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {Tags.map((tag, i) => (
-                        <Card key={i}>
-                            <CardContent className="flex flex-col gap-2 p-4">
-                                <div className="flex items-center justify-between">
-                                    <Badge
-                                        className={`text-sm px-2 py-1 rounded-full font-medium `}
-                                        style={{ backgroundColor: tag.color || "gray" }}
-                                        title={tag.name}
-                                    >
-                                        {tag.name}
-                                    </Badge>
-                                    <div className="flex gap-2">
-                                        <EditTagDialog
-                                            tag={tag}
-                                            onTagUpdated={handleTagUpdated}
-                                        />
-                                        <ConfirmDialog
-                                            trigger={<Button className={"cursor-pointer"} variant="ghost" size="icon">
-                                                <Trash2
-                                                    className="w-4 h-4 text-red-500 "
-                                                />
-                                            </Button>
-                                            }
-                                            title={`Delete tag "${tag.name}"?`}
-                                            onConfirm={() => deleteTagMutate(tag._id)}
-                                        />
-
-                                    </div>
-                                </div>
-                                <p className="text-sm text-muted-foreground">{tag.usageCount} contacts</p>
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
-            </div>
-        </>
-    )
+    return <div className="flex flex-1 flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3"><Input aria-label="Search tags" placeholder="Search tags…" className="w-48 sm:w-64" value={search} onChange={event => setSearch(event.target.value)} /><span className="text-xs text-muted-foreground">{Tags.length} tags</span></div>
+        <AddTagsDialog />
+      </div>
+      {visibleTags.length ? <div className="tag-library">
+        {visibleTags.map(tag => <Card key={tag._id} className="tag-library-card">
+          <CardContent className="tag-library-content">
+            <span className="tag-color-tile" style={{ '--tag-color': tagColor(tag.color) }} aria-hidden="true"><span /></span>
+            <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium" title={tag.name}>{tag.name}</p><p className="mt-1 text-xs text-muted-foreground">{tag.usageCount || 0} {tag.usageCount === 1 ? 'contact' : 'contacts'}</p></div>
+            <div className="flex items-center gap-0.5"><EditTagDialog tag={tag} onTagUpdated={handleTagUpdated} /><ConfirmDialog trigger={<Button variant="ghost" size="icon" aria-label={`Delete ${tag.name}`} disabled={isDeletingTag}><Trash2 className="size-4" /></Button>} title={`Delete tag "${tag.name}"?`} onConfirm={() => deleteTagMutate(tag._id)} /></div>
+          </CardContent>
+        </Card>)}
+      </div> : <div className="workspace-empty">{search ? 'No tags match your search.' : 'Create your first tag to organize contacts.'}</div>}
+    </div>;
 }
