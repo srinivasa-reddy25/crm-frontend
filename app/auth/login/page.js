@@ -33,7 +33,7 @@ function LoginPage() {
     // const [rememberMe, setRememberMe] = useState(false);
 
 
-    const { login, loginWithGoogle } = useContext(AuthContext);
+    const { login, loginWithGoogle, googleLoading } = useContext(AuthContext);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -144,9 +144,9 @@ function LoginPage() {
                         </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
-                        <Button variant="outline" className="w-full cursor-pointer" onClick={loginWithGoogle}>
+                        <Button variant="outline" className="w-full cursor-pointer" onClick={loginWithGoogle} disabled={googleLoading} aria-busy={googleLoading}>
                             <Mail size={18} />
-                            <span>Google</span>
+                            <span>{googleLoading ? 'Signing in…' : 'Google'}</span>
                         </Button>
                         <Button variant="outline" className="w-full cursor-not-allowed">
                             <Github size={18} />

@@ -5,13 +5,13 @@ import { createContext, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { auth, provider } from '@/lib/firebase';
+import { toast } from 'sonner';
 
 import {
     onAuthStateChanged,
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword,
-    signInWithRedirect,
-    getRedirectResult,
+    signInWithPopup,
     signOut,
     updateProfile,
 } from 'firebase/auth';
@@ -46,11 +46,11 @@ export function AuthProvider({ children }) {
     const router = useRouter();
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
-    const googleSyncInFlight = useRef(false);
+    const googleSignInInFlight = useRef(false);
+    const [googleLoading, setGoogleLoading] = useState(false);
 
 
     const syncWithBackend = async (firebaseUser, endpoint) => {
-        console.log("second step, syncing with backend : ", firebaseUser);
         const token = await firebaseUser.getIdToken();
 
         const metadata = {
@@ -74,7 +74,6 @@ export function AuthProvider({ children }) {
                 console.error(`Backend ${endpoint} error:`, result);
                 throw new Error(result.error || 'Failed to sync with backend');
             }
-            console.log(`Backend ${endpoint} success:`, result);
 
             return result;
         } catch (err) {
@@ -83,53 +82,54 @@ export function AuthProvider({ children }) {
         }
     };
 
-    const completeGoogleLogin = async (firebaseUser) => {
-        if (googleSyncInFlight.current) return;
+    const loginWithGoogle = async () => {
+        // Start the popup directly from the click to preserve browser user activation.
+        if (googleSignInInFlight.current) return;
+        googleSignInInFlight.current = true;
+        setGoogleLoading(true);
 
-        googleSyncInFlight.current = true;
         try {
-            await syncWithBackend(firebaseUser, 'google');
-            const token = await firebaseUser.getIdToken();
+            const result = await signInWithPopup(auth, provider);
+            await syncWithBackend(result.user, 'google');
+            const token = await result.user.getIdToken();
             storeAuthCookie(token);
-            sessionStorage.removeItem('googleRedirectPending');
+            setUser(result.user);
             router.replace('/dashboard');
         } catch (error) {
-            console.error('Google login error:', error);
-            throw error;
+            clearAuthCookie();
+            setUser(null);
+            // Do not restore an incomplete Google session on the next page load.
+            try {
+                await signOut(auth);
+            } catch (signOutError) {
+                console.error('Could not clear Google session:', signOutError.code);
+            }
+            console.error('Google login failed:', error.code || error.message);
+            const messages = {
+                'auth/popup-blocked': 'Your browser blocked Google sign-in. Allow popups for this site and try again.',
+                'auth/popup-closed-by-user': 'Google sign-in was cancelled. Please try again.',
+                'auth/cancelled-popup-request': 'Google sign-in was cancelled. Please try again.',
+                'auth/unauthorized-domain': 'This site is not authorized for Google sign-in. Add its hostname to Firebase Authentication authorized domains.',
+                'auth/operation-not-allowed': 'Google sign-in is not enabled in Firebase Authentication.',
+                'auth/network-request-failed': 'Could not reach Google sign-in. Check your connection and try again.',
+            };
+            toast.error(messages[error.code] || (error instanceof TypeError
+                ? 'Could not reach the CRM server. Make sure the backend is running and try again.'
+                : error.message || 'Google sign-in failed. Please try again.'));
         } finally {
-            googleSyncInFlight.current = false;
+            googleSignInInFlight.current = false;
+            setGoogleLoading(false);
         }
     };
-
-    const loginWithGoogle = async () => {
-        console.log('Starting Google sign-in process');
-        sessionStorage.setItem('googleRedirectPending', 'true');
-        await signInWithRedirect(auth, provider);
-    };
-
-
-    useEffect(() => {
-        let cancelled = false;
-
-        getRedirectResult(auth)
-            .then(async (result) => {
-                if (!cancelled && result?.user) {
-                    await completeGoogleLogin(result.user);
-                }
-            })
-            .catch((error) => {
-                sessionStorage.removeItem('googleRedirectPending');
-                console.error('Google redirect error:', error);
-            });
-
-        return () => {
-            cancelled = true;
-        };
-    }, []);
 
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+            // Google sign-in commits the app session only after backend sync succeeds.
+            if (googleSignInInFlight.current) {
+                setLoading(false);
+                return;
+            }
             setUser(firebaseUser);
             // console.log(" User details ", firebaseUser)
             if (firebaseUser) {
@@ -138,12 +138,6 @@ export function AuthProvider({ children }) {
                     const token = await firebaseUser.getIdToken();
                     storeAuthCookie(token);
 
-                    // Some browsers restore the Firebase user after a redirect but
-                    // return null from getRedirectResult. The pending marker lets us
-                    // still finish the backend sync and dashboard navigation.
-                    if (sessionStorage.getItem('googleRedirectPending') === 'true') {
-                        await completeGoogleLogin(firebaseUser);
-                    }
                 } catch (error) {
                     console.error("Error getting token:", error);
                 }
@@ -209,7 +203,7 @@ export function AuthProvider({ children }) {
 
     return (
         <AuthContext.Provider
-            value={{ user, loading, login, register, loginWithGoogle, logout, updateUserProfile }}
+            value={{ user, loading, login, register, loginWithGoogle, googleLoading, logout, updateUserProfile }}
         >
             {children}
         </AuthContext.Provider>
