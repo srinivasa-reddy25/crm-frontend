@@ -31,7 +31,7 @@ const registerSchema = z.object({
 
 
 function Register() {
-    const { register, loginWithGoogle, googleLoading } = useContext(AuthContext);
+    const { register, loginWithGoogle, googleLoading, loading } = useContext(AuthContext);
 
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
@@ -198,7 +198,7 @@ function Register() {
                     </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4 mb-6">
-                    <Button variant="outline" className="w-full" onClick={loginWithGoogle} disabled={googleLoading} aria-busy={googleLoading}>
+                    <Button variant="outline" className="w-full" onClick={loginWithGoogle} disabled={googleLoading || loading} aria-busy={googleLoading}>
                         <Mail size={18} />
                         <span>{googleLoading ? 'Signing in…' : 'Google'}</span>
                     </Button>

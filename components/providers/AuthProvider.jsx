@@ -12,6 +12,8 @@ import {
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword,
     signInWithPopup,
+    signInWithRedirect,
+    getRedirectResult,
     signOut,
     updateProfile,
 } from 'firebase/auth';
@@ -89,6 +91,13 @@ export function AuthProvider({ children }) {
         setGoogleLoading(true);
 
         try {
+            // Redirect only when the auth helper shares this site's origin.
+            // Cross-origin redirects can lose their result to storage partitioning.
+            if (auth.config.authDomain === window.location.host) {
+                sessionStorage.setItem('googleRedirectPending', 'true');
+                await signInWithRedirect(auth, provider);
+                return;
+            }
             const result = await signInWithPopup(auth, provider);
             await syncWithBackend(result.user, 'google');
             const token = await result.user.getIdToken();
@@ -96,6 +105,7 @@ export function AuthProvider({ children }) {
             setUser(result.user);
             router.replace('/dashboard');
         } catch (error) {
+            sessionStorage.removeItem('googleRedirectPending');
             clearAuthCookie();
             setUser(null);
             // Do not restore an incomplete Google session on the next page load.
@@ -106,7 +116,7 @@ export function AuthProvider({ children }) {
             }
             console.error('Google login failed:', error.code || error.message);
             const messages = {
-                'auth/popup-blocked': 'Your browser blocked Google sign-in. Allow popups for this site and try again.',
+                'auth/popup-blocked': 'Google sign-in could not open a popup. A browser setting or extension may be preventing it.',
                 'auth/popup-closed-by-user': 'Google sign-in was cancelled. Please try again.',
                 'auth/cancelled-popup-request': 'Google sign-in was cancelled. Please try again.',
                 'auth/unauthorized-domain': 'This site is not authorized for Google sign-in. Add its hostname to Firebase Authentication authorized domains.',
@@ -124,33 +134,81 @@ export function AuthProvider({ children }) {
 
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-            // Google sign-in commits the app session only after backend sync succeeds.
-            if (googleSignInInFlight.current) {
-                setLoading(false);
-                return;
-            }
-            setUser(firebaseUser);
-            // console.log(" User details ", firebaseUser)
-            if (firebaseUser) {
-                // User is signed in, store token in cookie
-                try {
-                    const token = await firebaseUser.getIdToken();
-                    storeAuthCookie(token);
+        let cancelled = false;
+        let unsubscribe;
 
-                } catch (error) {
-                    console.error("Error getting token:", error);
-                }
-            } else {
-                // User is signed out, clear cookie
+        const restoreSession = async () => {
+            let redirectResult;
+            try {
+                redirectResult = await getRedirectResult(auth);
+            } catch (error) {
+                sessionStorage.removeItem('googleRedirectPending');
                 clearAuthCookie();
+                console.error('Google redirect failed:', error.code || error.message);
+                if (!cancelled) toast.error(error.message || 'Google sign-in could not finish. Please try again.');
             }
+            if (cancelled) return;
 
-            setLoading(false);
-        });
-        return () => unsubscribe();
+            unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+                if (googleSignInInFlight.current) return;
+                const pending = sessionStorage.getItem('googleRedirectPending') === 'true';
+                const signedInUser = redirectResult?.user || firebaseUser;
+                redirectResult = null;
+
+                if (pending) {
+                    googleSignInInFlight.current = true;
+                    setGoogleLoading(true);
+                    try {
+                        if (!signedInUser || !signedInUser.providerData.some(({ providerId }) => providerId === 'google.com')) {
+                            throw new Error('Google sign-in did not complete. Please try again.');
+                        }
+                        await syncWithBackend(signedInUser, 'google');
+                        const token = await signedInUser.getIdToken();
+                        if (cancelled) return;
+                        storeAuthCookie(token);
+                        setUser(signedInUser);
+                        sessionStorage.removeItem('googleRedirectPending');
+                        router.replace('/dashboard');
+                    } catch (error) {
+                        sessionStorage.removeItem('googleRedirectPending');
+                        clearAuthCookie();
+                        setUser(null);
+                        await signOut(auth).catch(() => {});
+                        console.error('Google backend sign-in failed:', error.message);
+                        if (!cancelled) toast.error(error instanceof TypeError
+                            ? 'Could not reach the CRM server. Please try again.'
+                            : error.message);
+                    } finally {
+                        googleSignInInFlight.current = false;
+                        if (!cancelled) {
+                            setGoogleLoading(false);
+                            setLoading(false);
+                        }
+                    }
+                    return;
+                }
+
+                setUser(firebaseUser);
+                if (firebaseUser) {
+                    try {
+                        const token = await firebaseUser.getIdToken();
+                        if (!cancelled) storeAuthCookie(token);
+                    } catch (error) {
+                        console.error('Error getting token:', error.code);
+                    }
+                } else {
+                    clearAuthCookie();
+                }
+                if (!cancelled) setLoading(false);
+            });
+        };
+
+        restoreSession();
+        return () => {
+            cancelled = true;
+            unsubscribe?.();
+        };
     }, []);
-
 
 
     const login = async (email, password) => {
