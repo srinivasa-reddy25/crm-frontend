@@ -1,4 +1,5 @@
 "use client"
+import { WorkspaceSkeleton } from '@/components/workspace-skeleton';
 import { tagColor } from '@/lib/tag-colors';
 
 import { useState } from "react"
@@ -46,7 +47,7 @@ export default function Tags() {
         mutationFn: (id) => deleteTag(id),
         onSuccess: () => {
             toast.success('Tag deleted successfully!');
-            queryClient.invalidateQueries(['tags']); // refetch tag list
+            queryClient.invalidateQueries({ queryKey: ['tags'] }); // refetch tag list
         },
         onError: (error) => {
             console.error('Error deleting tag:', error);
@@ -75,7 +76,7 @@ export default function Tags() {
         },
         onSuccess: (res) => {
             toast.success('Tag updated successfully!');
-            queryClient.invalidateQueries(['tags']); // ⬅️ refetch tag list from server
+            queryClient.invalidateQueries({ queryKey: ['tags'] }); // ⬅️ refetch tag list from server
         },
         onError: (err, variables, context) => {
             if (context?.previousTags) queryClient.setQueryData(["tags"], context.previousTags);
@@ -83,7 +84,7 @@ export default function Tags() {
             toast.error('Failed to update tag');
         },
         onSettled: () => {
-            queryClient.invalidateQueries(['tags']);
+            queryClient.invalidateQueries({ queryKey: ['tags'] });
         },
     });
 
@@ -100,7 +101,7 @@ export default function Tags() {
 
 
 
-    if (isTagsLoading) return <p>Loading tags...</p>;
+    if (isTagsLoading) return <WorkspaceSkeleton variant="cards" label="Loading tags" />;
     if (isTagsError) return <p>Error loading tags: {tagsError?.message}</p>;
 
 

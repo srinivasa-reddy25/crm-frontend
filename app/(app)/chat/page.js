@@ -1,4 +1,5 @@
 'use client'
+import { WorkspaceSkeleton } from '@/components/workspace-skeleton';
 
 import { useEffect, useRef, useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
@@ -146,9 +147,7 @@ export default function Chat() {
 
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center h-screen">
-                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-            </div>
+            <WorkspaceSkeleton label="Loading conversations" />
         );
     }
 

@@ -1,4 +1,5 @@
 'use client';
+import { WorkspaceSkeleton } from '@/components/workspace-skeleton';
 
 import { ArrowDownRight, ArrowUpRight } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
@@ -37,7 +38,7 @@ export default function DashboardPage() {
   const tagRows = [...(tags.data || [])].sort((a, b) => b.value - a.value);
   const tagTotal = tagRows.reduce((sum, row) => sum + row.value, 0);
 
-  if (summary.isLoading) return <div className="workspace-loading" role="status">Loading your overview…</div>;
+  if (summary.isPending || companies.isPending || timeline.isPending || tags.isPending) return <WorkspaceSkeleton variant="dashboard" label="Loading overview" />;
   if (summary.isError) return <div className="workspace-empty" role="alert">Could not load your overview. Please refresh to try again.</div>;
 
   return <div className="dashboard-grid">

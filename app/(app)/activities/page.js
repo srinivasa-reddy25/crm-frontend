@@ -1,4 +1,5 @@
 'use client';
+import { WorkspaceSkeleton } from '@/components/workspace-skeleton';
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -160,10 +161,7 @@ function Activities() {
 
             <div className="activity-feed flex flex-1 flex-col overflow-y-auto">
                 {isLoading ? (
-                    <div className="text-center py-6">
-                        <Loader2 className="animate-spin mx-auto" />
-                        <p className="mt-2 text-muted-foreground">Loading activities...</p>
-                    </div>
+                    <WorkspaceSkeleton label="Loading activities" />
                 ) : isError ? (
                     <div className="text-foreground text-center">Error: {error.message}</div>
                 ) : (

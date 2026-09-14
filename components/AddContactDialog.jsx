@@ -1,4 +1,5 @@
 'use client';
+import { invalidateContactData } from '@/lib/invalidate-contact-data';
 import { tagColor } from '@/lib/tag-colors';
 
 import { useForm } from 'react-hook-form';
@@ -109,7 +110,7 @@ export function AddContactDialog() {
 
             setIsDialogOpen(false);
 
-            queryClient.invalidateQueries({ queryKey: ['contacts'] });
+            invalidateContactData(queryClient);
 
         } catch (error) {
             console.error('Error creating contact:', error);

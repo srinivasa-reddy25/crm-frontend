@@ -1,4 +1,5 @@
 'use client'
+import { invalidateContactData } from '@/lib/invalidate-contact-data';
 
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
@@ -81,7 +82,7 @@ export function ImportCsvDialog() {
 
         console.log("responseData  : ", data)
         console.log('File ready for upload:', file)
-        queryClient.invalidateQueries({ queryKey: ['contacts'] });
+        invalidateContactData(queryClient);
         setFile(null);
       } catch (error) {
         console.error('Error uploading file:', error)

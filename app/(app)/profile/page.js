@@ -1,4 +1,5 @@
 "use client"
+import { WorkspaceSkeleton } from '@/components/workspace-skeleton';
 
 import { useEffect, useState } from "react"
 import { Separator } from "@/components/ui/separator"
@@ -142,7 +143,7 @@ export default function ProfileClient() {
 
 
 
-  if (isLoading) return <div>Loading...</div>
+  if (isLoading) return <WorkspaceSkeleton label="Loading profile" />
   if (isError) {
     console.error("Error fetching user profile:", error)
     return <div>Error loading profile</div>

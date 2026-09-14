@@ -1,4 +1,6 @@
 'use client';
+import { WorkspaceSkeleton } from '@/components/workspace-skeleton';
+import { invalidateContactData } from '@/lib/invalidate-contact-data';
 import { tagColor } from '@/lib/tag-colors';
 import { cn } from "@/lib/utils";
 
@@ -70,7 +72,7 @@ export default function ContactDetails() {
     mutationFn: deleteContact,
     onSuccess: () => {
       toast.success('Contact deleted!');
-      queryClient.invalidateQueries(['contacts']);
+      invalidateContactData(queryClient);
       router.push('/contacts');
     },
     onError: (error) => {
@@ -86,7 +88,7 @@ export default function ContactDetails() {
     mutationFn: ({ id, data }) => updateContact(id, data),
     onSuccess: (res) => {
       toast.success('Contact updated!');
-      queryClient.invalidateQueries(['contacts']);
+      invalidateContactData(queryClient);
       setIsEditMode(false);
     },
     onError: (error) => {
@@ -189,7 +191,7 @@ export default function ContactDetails() {
 
 
   if (isLoading) {
-    return <Skeleton className="h-[300px] w-full rounded-xl" />;
+    return <WorkspaceSkeleton label="Loading contact" />;
   }
 
   if (error) {

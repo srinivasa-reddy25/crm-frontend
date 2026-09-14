@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { invalidateContactData } from '@/lib/invalidate-contact-data';
 import contactsApi from '@/services/contactsApi';
 import { toast } from 'sonner';
 
@@ -9,7 +10,7 @@ export const useCreateContact = () => {
     mutationFn: contactsApi.createContact,
     onSuccess: () => {
       toast.success('Contact created successfully');
-      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      invalidateContactData(queryClient);
     },
     onError: (error) => {
       toast.error(error?.response?.data?.message || 'Failed to create contact');

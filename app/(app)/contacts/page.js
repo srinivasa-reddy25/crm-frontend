@@ -1,4 +1,6 @@
 "use client"
+import { WorkspaceSkeleton } from '@/components/workspace-skeleton';
+import { invalidateContactData } from '@/lib/invalidate-contact-data';
 import { tagColor } from '@/lib/tag-colors';
 
 import { Button } from "@/components/ui/button"
@@ -50,7 +52,6 @@ function Contact() {
 
 
     const [currentPage, setCurrentPage] = useState(1)
-    const [totalPages, setTotalPages] = useState(1)
     const [itemsPerPage, setItemsPerPage] = useState(10)
 
 
@@ -69,7 +70,7 @@ function Contact() {
 
     const {
         data: contactData,
-        isLoading: isContactsLoading,
+        isPending: isContactsLoading,
         isError: isContactsError,
         error: contactsError,
     } = useQuery({
@@ -81,7 +82,7 @@ function Contact() {
                 limit: itemsPerPage,
             }
 
-            if (selectedTags.length === 0 || selectedTags.length === availableTags.length) {
+            if (selectedTags.length === 0) {
                 return getContacts(baseParams);
             }
 
@@ -92,14 +93,14 @@ function Contact() {
             const matchType = 'all';
             return getContacts({ ...baseParams, tags: selectedTags.join(','), matchType });
         },
-        enabled: !isTagsLoading,
     });
     const contacts = contactData?.contacts || [];
+    const totalPages = Math.max(1, Math.ceil((contactData?.total || 0) / itemsPerPage));
 
 
-    console.log("Contacts Data:", contacts);
+
     const displayContacts = contacts;
-    console.log("Contacts:", displayContacts);
+
 
 
 
@@ -112,7 +113,7 @@ function Contact() {
         onSuccess: (_, contactId) => {
             toast.success('Contact deleted successfully!');
             // alert('Contact deleted successfully!');
-            queryClient.invalidateQueries(['contacts']);
+            invalidateContactData(queryClient);
         },
         onError: (error) => {
             console.error('Failed to delete contact:', error);
@@ -126,7 +127,7 @@ function Contact() {
         onSuccess: () => {
             toast.success('Contacts deleted successfully!');
             // alert('Contacts deleted successfully!');
-            queryClient.invalidateQueries(['contacts']);
+            invalidateContactData(queryClient);
             setSelectedContactIds([]);
         },
         onError: (error) => {
@@ -190,14 +191,7 @@ function Contact() {
         let newSelectedTags;
 
         if (tagId === 'all') {
-            if (selectedTags.length === availableTags.length) {
-                // If all tags are selected, clear the selection
-                newSelectedTags = [];
-            }
-            else {
-                // If 'All Contacts' is selected, select all available tags
-                newSelectedTags = availableTags.map(tag => tag._id);
-            }
+            newSelectedTags = [];
         } else if (selectedTags.includes(tagId)) {
             // If tag is already selected, remove it
             newSelectedTags = selectedTags.filter(t => t !== tagId);
@@ -208,6 +202,8 @@ function Contact() {
 
         // Update the selected tags state
         setSelectedTags(newSelectedTags);
+        setCurrentPage(1);
+        setSelectedContactIds([]);
         console.log("Selected Tags:", newSelectedTags);
 
         // Apply filtering based on the new selected tags
@@ -227,16 +223,10 @@ function Contact() {
 
 
     useEffect(() => {
-        if (contactData?.total && contactData?.limit) {
-            const total = contactData.total;
-            const pages = Math.ceil(total / itemsPerPage);
-            setTotalPages(pages);
-        }
-    }, [contactData]);
-
-    useEffect(() => {
         const handler = setTimeout(() => {
             setDebouncedSearch(searchQuery);
+            setCurrentPage(1);
+            setSelectedContactIds([]);
         }, 400);
 
         return () => {
@@ -314,10 +304,11 @@ function Contact() {
                         </div>
                     </div>
                     {
-                        isContactsLoading && <p className="text-muted-foreground">Loading contacts...</p>
+                        isContactsLoading && <WorkspaceSkeleton variant={viewMode === "grid" ? "cards" : "rows"} label="Loading contacts" />
                     }
                     {isContactsError && <div role="alert" className="rounded-lg border p-4 text-sm">Could not load contacts. Please refresh to try again.</div>}
-                    {!isContactsLoading && !isContactsError && !contacts.length && <div role="status" className="workspace-empty">No contacts match this view. Try clearing your filters or add a contact.</div>}
+                    {!isContactsLoading && !isContactsError && !contacts.length && <div role="status" className="rounded-xl border py-16 px-6 text-center text-sm text-muted-foreground">{debouncedSearch || selectedTags.length ? "No contacts match this view. Try clearing your filters." : "No contacts yet. Add a contact or import a CSV to get started."}</div>}
+                    {!isContactsLoading && !isContactsError && contacts.length > 0 && <>
                     {selectedContactIds.length > 0 && (
                         <div className="border rounded-md p-3 flex flex-wrap gap-3 justify-between items-center bg-muted">
                             <div className="font-medium">
@@ -516,6 +507,7 @@ function Contact() {
                         totalPages={totalPages}
                         onPageChange={handlePageChange}
                     />
+                    </>}
 
                 </>
 
