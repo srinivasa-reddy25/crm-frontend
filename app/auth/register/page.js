@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 
 import AuthContext from "@/components/providers/AuthProvider";
+import { authErrorMessage } from '@/lib/auth-errors';
 import { toast } from "sonner";
 
 import { z } from "zod";
@@ -71,7 +72,7 @@ function Register() {
         setSubmitting(true);
         try {
             await register(name, email, password);
-            toast.success("Registration successful! Please check your email.");
+            toast.success("Account created. Verify your email to continue.");
             // alert("Registration successful! Please check your email.");
             setName("");
             setEmail("");
@@ -81,7 +82,7 @@ function Register() {
             setFormErrors({});
         } catch (err) {
             console.error("Registration failed:", err);
-            toast.error("Registration failed. Please try again.");
+            toast.error(authErrorMessage(err));
             // alert("Registration failed. Please try again.");
         } finally { setSubmitting(false); }
     };

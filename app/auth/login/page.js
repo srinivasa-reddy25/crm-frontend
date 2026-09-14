@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 
+import { authErrorMessage } from '@/lib/auth-errors';
 import { toast } from "sonner";
 
 
@@ -46,13 +47,14 @@ function LoginPage() {
         setSubmitting(true);
         try {
             await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
-            await login(email, password);
-            toast.success("Logged in successfully!");
+            setError(null);
+            const result = await login(email, password);
+            if (!result?.verificationRequired) toast.success("Logged in successfully!");
             // console.log("Logged in successfully!");
         } catch (error) {
             console.log("Login error:", error.message);
-            toast.error("Invalid email or password. Please try again.");
-            setError("Invalid email or password. Please try again.");
+            toast.error(authErrorMessage(error));
+            setError(authErrorMessage(error));
         } finally { setSubmitting(false); }
     };
 
